@@ -3,7 +3,7 @@ using CODDowngrader.Steam;
 namespace CODDowngrader.Patching;
 
 /// <param name="Locked">Files something has open, usually the game.</param>
-/// <param name="Modified">Files that are not the base build's version: replaced by a mod or a client, or damaged.</param>
+/// <param name="Modified">Files that are not the base build's version: replaced by a mod or a client, or damaged. Files Steam personalizes are never counted.</param>
 /// <param name="AlreadyThere">Files that are already the target build's version and need no writing.</param>
 /// <param name="Replaced">How many existing files the patch replaces or removes.</param>
 public sealed record PatchCheck(IReadOnlyList<string> Locked, IReadOnlyList<string> Modified, IReadOnlySet<string> AlreadyThere, int Replaced, ulong ReplacedBytes);
@@ -82,7 +82,7 @@ public static class PatchApplier
                 there.Add(write.Name);
                 continue;
             }
-            if (write.BaseSha is not null && sha != write.BaseSha) modified.Add(write.Name);
+            if (write.BaseSha is not null && sha != write.BaseSha && !write.Personalized) modified.Add(write.Name);
             replaced++;
             bytes += (ulong)new FileInfo(path).Length;
         }

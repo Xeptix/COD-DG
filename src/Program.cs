@@ -19,6 +19,7 @@ static async Task<int> RunAsync(string[] args)
 {
     var options = new Options();
     var list = false;
+    string? export = null;
 
     for (var i = 0; i < args.Length; i++)
     {
@@ -26,6 +27,9 @@ static async Task<int> RunAsync(string[] args)
         {
             case "--list":
                 list = true;
+                break;
+            case "--export":
+                export = i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[++i] : "";
                 break;
             case "--game" when i + 1 < args.Length && uint.TryParse(args[i + 1], out var appId):
                 options.AppId = appId;
@@ -53,7 +57,7 @@ static async Task<int> RunAsync(string[] args)
         }
     }
 
-    if (list)
+    if (list || export is not null)
     {
         try
         {
@@ -63,7 +67,7 @@ static async Task<int> RunAsync(string[] args)
                 Console.Error.WriteLine("Steam was not found. Pass its folder with --steam.");
                 return 1;
             }
-            return ListCommand.Run(steam);
+            return export is not null ? ExportCommand.Run(steam, export) : ListCommand.Run(steam);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
         {

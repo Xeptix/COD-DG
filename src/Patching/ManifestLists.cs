@@ -23,13 +23,18 @@ public static partial class ManifestLists
 
     static IReadOnlyList<ManifestFile>? Read(string folder, string saved, uint depot, ulong manifest, bool keep)
     {
+        var listing = Path.Combine(folder, ListingName(depot, manifest));
         if (DepotManifest.TryLoadFiles(saved) is { } files)
         {
-            if (keep) Keep(saved, SavedName(depot, manifest), move: false);
+            if (keep)
+            {
+                Keep(saved, SavedName(depot, manifest), move: false);
+                // DepotDownloader writes its listing beside the files as well; it has no place in a patch folder.
+                if (File.Exists(listing)) Keep(listing, ListingName(depot, manifest), move: true);
+            }
             return files;
         }
 
-        var listing = Path.Combine(folder, ListingName(depot, manifest));
         try
         {
             if (!File.Exists(listing)) return null;
@@ -58,7 +63,7 @@ public static partial class ManifestLists
             // A folder is listed with no content: a zero SHA, where an empty file has the SHA-1 of nothing.
             var sha = row.Groups[2].Value.ToUpperInvariant();
             var isFolder = size == 0 && sha.All(c => c == '0');
-            files.Add(new ManifestFile(row.Groups[3].Value.Replace('\\', '/').TrimEnd('/'), size, isFolder ? 0x40u : 0, isFolder ? null : sha));
+            files.Add(new ManifestFile(ManifestFile.NormalizeName(row.Groups[3].Value), size, isFolder ? 0x40u : 0, isFolder ? null : sha));
         }
         return files;
     }

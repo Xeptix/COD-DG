@@ -8,10 +8,23 @@ public sealed record ManifestFile(string Name, ulong Size, uint Flags, string? S
 {
     public bool IsDirectory => (Flags & 0x40) != 0;
 
+    /// <summary>
+    /// Steam personalizes this file for each account when it installs the game (Custom Executable Generation): it rewrites
+    /// part of the exe and signs it, so the copy on disk never has the manifest's SHA-1. Black Ops II's exes are like this.
+    /// </summary>
+    public bool IsCustomExecutable => (Flags & 0x80) != 0;
+
     public bool IsSymlink => (Flags & 0x200) != 0;
 
     /// <summary>The file's path under an install folder, using this OS's separator.</summary>
     public string PathUnder(string root) => Path.Combine(root, Name.Replace('/', Path.DirectorySeparatorChar));
+
+    /// <summary>
+    /// A manifest's file name as a path under the install folder: / between folders and no "." folders. Manifests from 2011
+    /// write ".\main\file" where later ones write "main\file", and both are the same file on disk.
+    /// </summary>
+    public static string NormalizeName(string name) =>
+        string.Join('/', name.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries).Where(part => part != "."));
 }
 
 /// <summary>
@@ -180,7 +193,7 @@ public sealed class DepotManifest
                 else mapping.Skip();
             }
 
-            files.Add(new ManifestFile(name.Replace('\\', '/').TrimEnd('/'), size, flags, sha is { Length: > 0 } ? sha : null));
+            files.Add(new ManifestFile(ManifestFile.NormalizeName(name), size, flags, sha is { Length: > 0 } ? sha : null));
         }
 
         return files;

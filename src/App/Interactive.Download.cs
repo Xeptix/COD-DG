@@ -1,5 +1,6 @@
 using System.Globalization;
 using CODDowngrader.Download;
+using CODDowngrader.Patching;
 using CODDowngrader.Steam;
 using Spectre.Console;
 
@@ -104,10 +105,13 @@ public sealed partial class Interactive
         var plan = new List<SeedFile>();
         if (game.Installed is { } app && Directory.Exists(app.InstallDir))
         {
+            var recorded = DepotConfig.Read(destination);
             foreach (var (depot, manifest) in depots)
             {
                 ulong? have = game.InstalledManifests is { } installed && installed.TryGetValue(depot, out var h) ? h : null;
-                var chosenFiles = library.Files(depot, manifest);
+                var chosenFiles = library.Files(depot, manifest) ?? ManifestLists.Find(depot, manifest, destination);
+                // DepotDownloader does not check the files of a depot it has recorded as finished, so nothing unchecked goes into one.
+                if (chosenFiles is null && recorded?.GetValueOrDefault(depot) is { } done && done != 0 && done != DepotConfig.InProgress) continue;
                 var installedFiles = have is null ? null : have == manifest ? chosenFiles : library.Files(depot, have.Value);
                 plan.AddRange(Seeder.Plan(app.InstallDir, destination, depot, chosenFiles, installedFiles, have == manifest));
             }

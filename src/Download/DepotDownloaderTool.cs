@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using CODDowngrader.Steam;
 
 namespace CODDowngrader.Download;
 
@@ -173,6 +174,13 @@ public static partial class DepotDownloaderTool
         args.Add("-remember-password");
         return args;
     }
+
+    /// <summary>
+    /// The lines of a -filelist for these files. DepotDownloader matches a file by its name as the manifest writes it, with / for
+    /// \, and manifests from 2011 write ".\main\file", so every file is listed both ways.
+    /// </summary>
+    public static IEnumerable<string> FileListLines(IEnumerable<string> names) =>
+        names.Select(ManifestFile.NormalizeName).Distinct(StringComparer.OrdinalIgnoreCase).SelectMany(name => new[] { name, "./" + name });
 
     [GeneratedRegex(@"Next time you can login with -username (\S+) -remember-password")]
     private static partial Regex QrApprovedRegex();

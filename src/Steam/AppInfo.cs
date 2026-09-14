@@ -15,6 +15,9 @@ public sealed record DepotInfo(
     ulong? PublicManifest,
     ulong? PublicSize)
 {
+    /// <summary>What the public manifest takes to download: its size compressed.</summary>
+    public ulong? PublicDownload { get; init; }
+
     /// <summary>Steamworks redistributables (sharedinstall 1): installed once for every game, never part of a download.</summary>
     public bool IsRedistributable => SharedInstall == "1";
 
@@ -24,6 +27,9 @@ public sealed record DepotInfo(
     public bool ForWindows => string.IsNullOrEmpty(OsList) || OsList.Contains("windows", StringComparison.OrdinalIgnoreCase);
 }
 
+/// <summary>A branch of an app: "public", or a beta. <paramref name="Updated"/> is when Steam last set the branch's build.</summary>
+public sealed record BranchInfo(string Name, uint? BuildId, DateTimeOffset? Updated, bool PasswordRequired);
+
 /// <summary>The part of an app's Steam product info this tool reads.</summary>
 public sealed record AppInfo(
     uint AppId,
@@ -31,6 +37,8 @@ public sealed record AppInfo(
     uint? PublicBuildId,
     IReadOnlyList<DepotInfo> Depots)
 {
+    public IReadOnlyList<BranchInfo> Branches { get; init; } = Array.Empty<BranchInfo>();
+
     public DepotInfo? Depot(uint depotId) => Depots.FirstOrDefault(d => d.DepotId == depotId);
 
     public static AppInfo From(uint appId, KvNode app)
@@ -57,11 +65,23 @@ public sealed record AppInfo(
                 ParseUInt(node.Get("depotfromapp")),
                 node.Get("sharedinstall"),
                 ulong.TryParse(gid, out var g) ? g : null,
-                ulong.TryParse(manifest?.Get("size"), out var s) ? s : null));
+                ulong.TryParse(manifest?.Get("size"), out var s) ? s : null)
+            {
+                PublicDownload = ulong.TryParse(manifest?.Get("download"), out var compressed) ? compressed : null,
+            });
+        }
+
+        var branches = new List<BranchInfo>();
+        foreach (var branch in depotsNode?["branches"]?.Children ?? new List<KvNode>())
+        {
+            var updated = long.TryParse(branch.Get("timeupdated"), out var seconds) && seconds > 0
+                ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+                : (DateTimeOffset?)null;
+            branches.Add(new BranchInfo(branch.Key, ParseUInt(branch.Get("buildid")), updated, branch.Get("pwdrequired") == "1"));
         }
 
         var pub = depotsNode?["branches"]?["public"];
-        return new AppInfo(appId, app["common"]?.Get("name"), ParseUInt(pub?.Get("buildid")), depots);
+        return new AppInfo(appId, app["common"]?.Get("name"), ParseUInt(pub?.Get("buildid")), depots) { Branches = branches };
     }
 
     static uint? ParseUInt(string? s) => uint.TryParse(s, out var v) ? v : null;

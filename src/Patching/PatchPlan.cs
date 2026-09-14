@@ -3,8 +3,12 @@ using CODDowngrader.Steam;
 
 namespace CODDowngrader.Patching;
 
-/// <summary>A file a patch writes: the target build's version, from one depot. <paramref name="BaseSha"/> is the base build's version, when it has one.</summary>
-public sealed record PatchWrite(string Name, uint Depot, ulong Size, string Sha, string? BaseSha);
+/// <summary>
+/// A file a patch writes: the target build's version, from one depot. <paramref name="BaseSha"/> is the base build's version,
+/// when it has one. <paramref name="Personalized"/> is a file Steam personalizes for each account in either build, so the
+/// installed copy's SHA-1 says nothing about which build it is.
+/// </summary>
+public sealed record PatchWrite(string Name, uint Depot, ulong Size, string Sha, string? BaseSha, bool Personalized = false);
 
 /// <summary>A file of the base build that no depot of the target build has.</summary>
 public sealed record PatchRemove(string Name, ulong Size, string? Sha);
@@ -17,8 +21,10 @@ public sealed class PatchPlan
 {
     public PatchPlan(IReadOnlyList<PatchWrite> writes, IReadOnlyList<PatchRemove> removes, bool removesKnown)
     {
-        Writes = writes;
-        Removes = removes;
+        // Patches saved by 1.0.0 can name one file two ways, "./main/file" to write and "main/file" to remove.
+        Writes = writes.Select(w => w with { Name = ManifestFile.NormalizeName(w.Name) }).ToList();
+        var written = new HashSet<string>(Writes.Select(w => w.Name), PathRules.Comparer);
+        Removes = removes.Select(r => r with { Name = ManifestFile.NormalizeName(r.Name) }).Where(r => !written.Contains(r.Name)).ToList();
         RemovesKnown = removesKnown;
     }
 
@@ -45,7 +51,7 @@ public sealed class PatchPlan
         {
             var old = before.TryGetValue(file.Name, out var b) ? b.File : null;
             if (old?.Sha is not null && old.Sha == file.Sha) continue;
-            writes.Add(new PatchWrite(file.Name, depot, file.Size, file.Sha ?? "", old?.Sha));
+            writes.Add(new PatchWrite(file.Name, depot, file.Size, file.Sha ?? "", old?.Sha, file.IsCustomExecutable || old?.IsCustomExecutable == true));
         }
 
         var removesKnown = keptLists.All(l => l is not null);
@@ -73,7 +79,10 @@ public sealed class PatchPlan
         foreach (var (depot, files) in lists.OrderBy(l => l.Key))
         {
             foreach (var file in files)
-                if (!file.IsDirectory && !file.IsSymlink && file.Name.Length > 0) merged[file.Name] = (depot, file);
+            {
+                var name = ManifestFile.NormalizeName(file.Name);
+                if (!file.IsDirectory && !file.IsSymlink && name.Length > 0) merged[name] = (depot, file with { Name = name });
+            }
         }
         return merged;
     }

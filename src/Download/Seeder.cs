@@ -87,13 +87,13 @@ public static class Seeder
             if (!finished.TryGetValue(depot, out var done) || done != manifest) continue;
             var files = DepotManifest.TryLoadFiles(Path.Combine(destination, ".DepotDownloader", $"{depot}_{manifest}.manifest"));
             if (files is null) return new CleanupResult(0, depot);
-            keep.UnionWith(files.Select(f => f.Name));
+            keep.UnionWith(files.Select(f => ManifestFile.NormalizeName(f.Name)));
         }
 
         var removed = 0;
         foreach (var name in part.CopiedFromInstall.Values.SelectMany(n => n).Distinct(PathRules.Comparer))
         {
-            if (keep.Contains(name)) continue;
+            if (keep.Contains(ManifestFile.NormalizeName(name))) continue;
             var path = new ManifestFile(name, 0, 0).PathUnder(destination);
             if (!PathRules.IsInside(path, destination) || !File.Exists(path)) continue;
             File.Delete(path);

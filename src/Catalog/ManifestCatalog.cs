@@ -2,8 +2,8 @@ using System.Globalization;
 
 namespace CODDowngrader.Catalog;
 
-/// <summary>A public manifest of a depot and when SteamDB first saw it.</summary>
-public sealed record ListedManifest(ulong ManifestId, DateTimeOffset FirstSeen);
+/// <summary>A public manifest of a depot, when SteamDB first saw it, and its size on disk once a PC's export has shown it.</summary>
+public sealed record ListedManifest(ulong ManifestId, DateTimeOffset FirstSeen, ulong? Size = null);
 
 /// <summary>
 /// The built-in manifest list, Catalog/manifests.txt: every manifest of every depot of the Call of Duty
@@ -96,8 +96,9 @@ public sealed class ManifestCatalog
                     default:
                         var id = uint.Parse(words[0], NumberStyles.None, inv);
                         var seen = DateTimeOffset.ParseExact(words[2], "yyyy-MM-dd'T'HH:mm:ss'Z'", inv, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+                        ulong? size = words.Length > 3 ? ulong.Parse(words[3], NumberStyles.None, inv) : null;
                         if (!rows.TryGetValue(id, out var list)) rows[id] = list = new();
-                        list.Add((new ListedManifest(ulong.Parse(words[1], NumberStyles.None, inv), seen), number));
+                        list.Add((new ListedManifest(ulong.Parse(words[1], NumberStyles.None, inv), seen, size), number));
                         break;
                 }
             }

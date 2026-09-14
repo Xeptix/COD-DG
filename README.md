@@ -274,6 +274,17 @@ python tools/catalog.py add rows.txt
 
 ## Changelog
 
+### v1.0.1
+
+- Modern Warfare 2's builds from before 3 Sep 2026 download complete. Their English content names its
+  files the old way, `.\main\...`, and a download that started from the installed copy deleted 120 of
+  those files, 6.8 GB, once DepotDownloader had finished. Putting that build into the installed game, or
+  applying a patch of it, removed the same files straight after writing them. Choosing the same version
+  and folder again fetches what is missing.
+- Exes Steam personalizes for each account when it installs a game, such as Black Ops II's, are no longer
+  reported as replaced by a mod or a client.
+- A patch folder no longer keeps DepotDownloader's file list beside the patch.
+
 ### v1.0.0
 
 First release.

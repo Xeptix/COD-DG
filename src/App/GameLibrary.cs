@@ -244,7 +244,9 @@ public sealed class GameLibrary
         if (owner is not null && owner.Depots.TryGetValue(depot, out var have) && have.ManifestId == manifest) return have.Size;
 
         var info = DepotInfo(game, depot);
-        return info is not null && info.PublicManifest == manifest ? info.PublicSize : null;
+        if (info is not null && info.PublicManifest == manifest && info.PublicSize is { } size) return size;
+
+        return List.Depots.TryGetValue(depot, out var rows) ? rows.FirstOrDefault(r => r.ManifestId == manifest)?.Size : null;
     }
 
     public bool IsDlc(GameEntry game, uint depot)

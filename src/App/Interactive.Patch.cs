@@ -1,4 +1,5 @@
 using System.Globalization;
+using CODDowngrader.Download;
 using CODDowngrader.Patching;
 using CODDowngrader.Steam;
 using Spectre.Console;
@@ -125,6 +126,9 @@ public sealed partial class Interactive
             AnsiConsole.MarkupLine("[grey]Files this build does not have are left in place, because a depot that stays as it is has no file list on this PC.[/]");
         if (check is { AlreadyThere.Count: > 0 })
             AnsiConsole.MarkupLine($"[grey]{check.AlreadyThere.Count} files are already this build's version.[/]");
+        var personalized = writes.Where(w => w.Personalized).Select(w => w.Name).ToList();
+        if (personalized.Count > 0)
+            AnsiConsole.MarkupLine($"[grey]Steam personalizes {Markup.Escape(string.Join(", ", personalized))} for each account when it installs the game. What is downloaded is Steam's original.[/]");
         if (check is { Modified.Count: > 0 })
         {
             AnsiConsole.MarkupLine($"[yellow]{check.Modified.Count} files are not the installed build's version, as when a mod or a client has replaced them. They are replaced as well:[/]");
@@ -177,7 +181,7 @@ public sealed partial class Interactive
         Directory.CreateDirectory(job.Folder);
         var listPath = Path.ChangeExtension(job.LogPath, ".files.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(listPath)!);
-        await File.WriteAllLinesAsync(listPath, writes.Select(w => w.Name).Distinct(PathRules.Comparer));
+        await File.WriteAllLinesAsync(listPath, DepotDownloaderTool.FileListLines(writes.Select(w => w.Name)));
         var depots = writes.Select(w => w.Depot).Distinct().OrderBy(d => d).Select(d => (Depot: d, Manifest: job.Target[d])).ToList();
 
         while (true)
