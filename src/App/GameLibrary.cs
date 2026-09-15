@@ -114,7 +114,7 @@ public sealed class GameLibrary
             installed.TryGetValue(id, out var app);
             infos.TryGetValue(id, out var info);
             var title = CatalogGames.Find(id);
-            var owners = app is not null ? InstalledDepots(app, info) : DefaultDepots(id, info);
+            var owners = app is not null ? InstalledDepots(app, info) : DefaultDepots(id, info, list.NotDefault);
             if (app is null && owners.Count == 0) owners = ListedDepots(id, list);
 
             var installedManifests = new Dictionary<uint, ulong>();
@@ -167,15 +167,18 @@ public sealed class GameLibrary
         return owners;
     }
 
-    /// <summary>For a game that is not installed: its Windows English depots, its own and borrowed alike.</summary>
-    static Dictionary<uint, uint> DefaultDepots(uint appId, AppInfo? info)
+    /// <summary>
+    /// For a game that is not installed: its Windows English depots, its own and borrowed alike, less those the built-in list
+    /// says are never part of one.
+    /// </summary>
+    internal static Dictionary<uint, uint> DefaultDepots(uint appId, AppInfo? info, IReadOnlySet<uint> notDefault)
     {
         var owners = new Dictionary<uint, uint>();
         if (info is null) return owners;
 
         foreach (var d in info.Depots)
         {
-            if (d.IsRedistributable || !d.ForWindows || d.LowViolence) continue;
+            if (d.IsRedistributable || !d.ForWindows || d.LowViolence || notDefault.Contains(d.DepotId)) continue;
             if (!string.IsNullOrEmpty(d.Language) && !d.Language.Equals("english", StringComparison.OrdinalIgnoreCase)) continue;
             if (d.IsBorrowed) owners[d.DepotId] = d.DepotFromApp!.Value;
             else if (d.PublicManifest is not null) owners[d.DepotId] = appId;
@@ -185,7 +188,9 @@ public sealed class GameLibrary
 
     /// <summary>For a game Steam has no depot list for on this PC: the depots the built-in list names for it.</summary>
     static Dictionary<uint, uint> ListedDepots(uint appId, ManifestCatalog list) =>
-        list.Apps.TryGetValue(appId, out var depots) ? new Dictionary<uint, uint>(depots) : new Dictionary<uint, uint>();
+        list.Apps.TryGetValue(appId, out var depots)
+            ? depots.Where(d => !list.NotDefault.Contains(d.Key)).ToDictionary(d => d.Key, d => d.Value)
+            : new Dictionary<uint, uint>();
 
     /// <summary>The manifest on disk for a depot of this game: its own record, or the owning app's when that app is installed in the same folder.</summary>
     static ulong? InstalledManifest(IReadOnlyDictionary<uint, InstalledApp> installed, InstalledApp app, uint depot, uint owner)
@@ -260,6 +265,7 @@ public sealed class GameLibrary
     {
         var info = DepotInfo(game, depot);
         var name = !string.IsNullOrWhiteSpace(info?.Name) ? info.Name
+            : List.Names.TryGetValue(depot, out var listed) ? listed
             : IsDlc(game, depot) ? $"DLC {info?.DlcAppId ?? _installed.GetValueOrDefault(game.OwnerOf(depot))?.Depots.GetValueOrDefault(depot)?.DlcAppId}"
             : !string.IsNullOrEmpty(info?.Language) ? $"{info.Language} language"
             : "";

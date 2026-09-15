@@ -128,7 +128,7 @@ public sealed partial class Interactive
             AnsiConsole.MarkupLine($"[grey]{check.AlreadyThere.Count} files are already this build's version.[/]");
         var personalized = writes.Where(w => w.Personalized).Select(w => w.Name).ToList();
         if (personalized.Count > 0)
-            AnsiConsole.MarkupLine($"[grey]Steam personalizes {Markup.Escape(string.Join(", ", personalized))} for each account when it installs the game. What is downloaded is Steam's original.[/]");
+            AnsiConsole.MarkupLine($"[grey]Steam personalizes {Markup.Escape(string.Join(", ", personalized))} for each account when it installs the game, and only for the build it installs. What is downloaded is Steam's original.[/]");
         if (check is { Modified.Count: > 0 })
         {
             AnsiConsole.MarkupLine($"[yellow]{check.Modified.Count} files are not the installed build's version, as when a mod or a client has replaced them. They are replaced as well:[/]");
@@ -155,14 +155,15 @@ public sealed partial class Interactive
     }
 
     /// <summary>Hashes the files of a folder against the build, with a progress bar. Returns the ones missing or wrong.</summary>
-    static async Task<List<PatchWrite>> VerifyAsync(string folder, IReadOnlyList<PatchWrite> writes, string title)
+    static async Task<List<PatchWrite>> VerifyAsync(string folder, IReadOnlyList<PatchWrite> writes, string title,
+        IReadOnlyDictionary<string, string>? personalized = null)
     {
         var bad = new List<PatchWrite>();
         var total = writes.Aggregate(0UL, (sum, w) => sum + w.Size);
         await AnsiConsole.Progress().StartAsync(async ctx =>
         {
             var task = ctx.AddTask(title, maxValue: Math.Max(1, (double)total));
-            bad = await Task.Run(() => PatchApplier.Missing(folder, writes, n => task.Increment(n)));
+            bad = await Task.Run(() => PatchApplier.Missing(folder, writes, n => task.Increment(n), personalized));
             task.Value = task.MaxValue;
         });
         return bad;
@@ -221,7 +222,7 @@ public sealed partial class Interactive
     /// Undo. False when the user backed out, or writing stopped part way.
     /// </summary>
     async Task<bool> ApplyPlanAsync(GameLibrary library, IReadOnlyList<GameEntry> apps, string build, PatchPlan plan,
-        IReadOnlySet<string> skip, string source, bool move, IReadOnlyDictionary<uint, ulong> target, IReadOnlyDictionary<uint, uint> owners)
+        IReadOnlySet<string> skip, string source, bool move, IReadOnlyDictionary<uint, ulong> target, IReadOnlyDictionary<uint, uint> owners, string? part)
     {
         var app = apps[0].Installed!;
         var names = plan.Writes.Where(w => !skip.Contains(w.Name)).Select(w => w.Name).Concat(plan.Removes.Select(r => r.Name)).ToList();
@@ -246,6 +247,7 @@ public sealed partial class Interactive
             AppIds = apps.Select(a => a.AppId).ToList(),
             Game = string.Join(" + ", apps.Select(a => a.Name)),
             Build = build,
+            Part = part,
             Applied = DateTimeOffset.Now,
             SteamManifests = IdMap.Write(FolderManifests(library, app.InstallDir)),
             TargetManifests = IdMap.Write(target),
@@ -275,6 +277,46 @@ public sealed partial class Interactive
         }
         return true;
     }
+
+    /// <summary>
+    /// The files Steam personalized for the account in the installed game that <paramref name="build"/> has the same original of.
+    /// File lists come from Steam's manifest cache, the tool's own, or what DepotDownloader left in <paramref name="folder"/>; a
+    /// depot without both is left out.
+    /// </summary>
+    static List<PersonalizedCopy> PersonalizedInInstall(GameLibrary library, string installDir, IReadOnlyDictionary<uint, ulong> build,
+        IReadOnlyDictionary<uint, ulong> installed, string? folder)
+    {
+        IReadOnlyList<ManifestFile>? List(uint depot, ulong manifest) => library.Files(depot, manifest) ?? ManifestLists.Find(depot, manifest, folder);
+
+        var buildLists = new Dictionary<uint, IReadOnlyList<ManifestFile>>();
+        var installedLists = new Dictionary<uint, IReadOnlyList<ManifestFile>>();
+        foreach (var (depot, manifest) in build)
+        {
+            if (!installed.TryGetValue(depot, out var have) || have == 0 || List(depot, manifest) is not { } list) continue;
+            if ((have == manifest ? list : List(depot, have)) is not { } before) continue;
+            buildLists[depot] = list;
+            installedLists[depot] = before;
+        }
+        return PersonalizedFiles.Find(installDir, buildLists, installedLists);
+    }
+
+    /// <summary>Asks which copy of the exes Steam personalizes to use. True for the copy from the installed game.</summary>
+    static bool ChoosePersonalized(IReadOnlyList<PersonalizedCopy> copies, bool inGame)
+    {
+        var names = Markup.Escape(string.Join(", ", copies.Select(c => c.Name)));
+        AnsiConsole.MarkupLine($"[grey]Steam personalizes {names} for each account when it installs the game: it rewrites part of the exe and signs it. The copy in your installed game was made from the same original as this build's, so this build can have either.[/]");
+        return Prompt(copies.Count == 1 ? $"Which {names}?" : "Which copies of these exes?", new List<Item>
+        {
+            new(inGame ? "Keep the copy Steam personalized for your account" : "The copy Steam personalized for your account, from the installed game", "personalized"),
+            new(inGame ? "Steam's original, in its place" : "Steam's original, as downloaded", "original"),
+        }).Kind == "personalized";
+    }
+
+    /// <summary>The plan with Steam's originals of <paramref name="copies"/> written over the personalized copies in the game.</summary>
+    static PatchPlan WithOriginals(PatchPlan plan, IEnumerable<PersonalizedCopy> copies) =>
+        new(plan.Writes.Concat(copies.Select(c => new PatchWrite(c.Name, c.Depot, c.Size, c.Sha, c.Sha, Personalized: true)))
+                .OrderBy(w => w.Name, PathRules.Comparer).ToList(),
+            plan.Removes, plan.RemovesKnown);
 
     static IEnumerable<GameEntry> FolderApps(GameLibrary library, string installDir) =>
         library.Entries.Where(e => e.Installed is { } app && PathRules.Same(app.InstallDir, installDir));

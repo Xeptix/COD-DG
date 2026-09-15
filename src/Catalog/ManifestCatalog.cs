@@ -44,6 +44,15 @@ public sealed class ManifestCatalog
     /// <summary>The depots a download of each app is made of, mapped to the app that owns them.</summary>
     public IReadOnlyDictionary<uint, IReadOnlyDictionary<uint, uint>> Apps { get; }
 
+    /// <summary>
+    /// Depots never part of a download of a game Steam has not installed, though product info does not rule them out: Modern
+    /// Warfare 2's German low-violence content has no language and no low-violence flag.
+    /// </summary>
+    public IReadOnlySet<uint> NotDefault { get; private init; } = new HashSet<uint>();
+
+    /// <summary>Depot names, as SteamDB shows them.</summary>
+    public IReadOnlyDictionary<uint, string> Names { get; private init; } = new Dictionary<uint, string>();
+
     static ManifestCatalog LoadBuiltIn()
     {
         using var stream = typeof(ManifestCatalog).Assembly.GetManifestResourceStream(ResourceName)
@@ -59,6 +68,8 @@ public sealed class ManifestCatalog
         DateTimeOffset? historyFrom = null;
         var apps = new Dictionary<uint, IReadOnlyDictionary<uint, uint>>();
         var hidden = new HashSet<(uint, ulong)>();
+        var notDefault = new HashSet<uint>();
+        var names = new Dictionary<uint, string>();
         var rows = new Dictionary<uint, List<(ListedManifest Manifest, int Line)>>();
 
         var number = 0;
@@ -93,6 +104,13 @@ public sealed class ManifestCatalog
                     case "not-public":
                         hidden.Add((uint.Parse(words[1], NumberStyles.None, inv), ulong.Parse(words[2], NumberStyles.None, inv)));
                         break;
+                    case "not-default":
+                        notDefault.Add(uint.Parse(words[1], NumberStyles.None, inv));
+                        break;
+                    case "name":
+                        var text = (cut < 0 ? line : line[..cut]).Trim();
+                        names[uint.Parse(words[1], NumberStyles.None, inv)] = text.Split((char[]?)null, 3, StringSplitOptions.RemoveEmptyEntries)[2];
+                        break;
                     default:
                         var id = uint.Parse(words[0], NumberStyles.None, inv);
                         var seen = DateTimeOffset.ParseExact(words[2], "yyyy-MM-dd'T'HH:mm:ss'Z'", inv, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
@@ -117,6 +135,6 @@ public sealed class ManifestCatalog
                 .ThenByDescending(x => x.Line)
                 .Select(x => x.Manifest)
                 .ToList());
-        return new ManifestCatalog(updated, historyFrom, ordered, apps);
+        return new ManifestCatalog(updated, historyFrom, ordered, apps) { NotDefault = notDefault, Names = names };
     }
 }

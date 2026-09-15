@@ -38,8 +38,13 @@ public static class Seeder
             candidates = chosen ?? installed ?? Array.Empty<ManifestFile>();
         }
 
+        // Steam personalizes these for the account, so the installed copy is never the build's file. DepotDownloader downloads
+        // Steam's original, since it does not check a file again in a depot it has finished.
+        var personalized = new HashSet<string>(new[] { chosen, installed }.SelectMany(l => l ?? Array.Empty<ManifestFile>())
+            .Where(f => f.IsCustomExecutable).Select(f => f.Name), PathRules.Comparer);
+
         var plan = new List<SeedFile>();
-        foreach (var file in candidates.Where(f => !f.IsDirectory && !f.IsSymlink && f.Size > 0).DistinctBy(f => f.Name, PathRules.Comparer))
+        foreach (var file in candidates.Where(f => !f.IsDirectory && !f.IsSymlink && f.Size > 0 && !personalized.Contains(f.Name)).DistinctBy(f => f.Name, PathRules.Comparer))
         {
             var source = file.PathUnder(installDir);
             var target = Path.GetFullPath(file.PathUnder(destination));

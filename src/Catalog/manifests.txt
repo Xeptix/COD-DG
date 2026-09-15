@@ -8,6 +8,9 @@
 #   app <app> <depot> <depot>@<owner> ...  the depots a download of the app is made of; @<owner> marks
 #                                          a depot another app owns
 #   not-public <depot> <manifest>          listed on SteamDB, but not what Steam installed
+#   not-default <depot>                    never part of a download of a game Steam has not installed, such as
+#                                          low-violence content product info does not mark as such
+#   name <depot> <name>                    the depot's name on SteamDB
 #   <depot> <manifest> <first seen, UTC> [<size>]
 #                                          one manifest of a depot, newest first, with its size on disk
 #                                          in bytes once a PC's export has shown it
@@ -16,28 +19,245 @@ updated 2026-09-14
 history-from 2014-06-25
 
 app 2620 2621 2623
-app 2640 2641 42621
-app 2630 2631 2632 2633 2634 2668
+app 2640 2641 2621@2620 2642
+app 2630 2631 2632 2633 2634
 app 7940 7967 7942 7941 7944 7945 7946 7962
-app 10090 10091 10097 10092
-app 10180 10182 10181 10186 10183
-app 10190 10196 10195 10184 10182@10180 10186@10180 10183@10180
+app 10090 10091 10092
+app 10180 10182 10181 10183
+app 10190 10196 10195 10184 10182@10180 10183@10180
 app 42680 42682@42690 42681 42683@42690
 app 42690 42682 42691 42683 42695 42696 42697 42698
-app 42700 42719 42723 42718 42716 42702 42701 42714 42703
+app 42700 42719 42723 42718 42716 42702 42701 42703
 app 42710 42722 42717 42715 42704 42702@42700 42703@42700
 app 202970 202971 202972 202973 202974 202975 212931 202981 202998 219094
 app 202990 219091 202991 202992 202972@202970 202973@202970 202975@202970 212931@202970 203001 233171 219097 238801 219098 247161 219101 255561 219103 202998@202970 219094@202970
 app 212910 219092 212911 202972@202970 212912 202975@202970 212921 202998@202970 219096 233181 219099 238811 219102 247169 219104 255569 219094@202970
-app 209160 209161 209162 209163 209172
+app 209160 209161 209162@209170 209163 209172@209170
 app 209170 209171 209164 209162 209172 255164 259250 277330 259251 277338 259252 277346 259253 277354 286635 286636
-app 209650 209651 209652 310342 310351 310353 310352 310343
-app 209660 310340 310341 310342 310343 310351 310352 310353 318794 318793 318792 318791 318790
+app 209650 209651 209652 310342@209660 310351@209660 310353@209660 310352@209660 310343@209660
+app 209660 310340 310341 310342 310343 310351 310352 310353 318794 318793 318792 318791 318790 317661 324231 334461 347770
 app 311210 311211 311212 311213 366840 311224 366841 401140 366842 401151 366848 408631 366849 408783 366844 401162 366845 408799 366846 408811 366847 408823 408835 408836 408837 408838 408839 408840 408841 408842 408843 408844 408845 408846 408847 408848 624760 408849 581450 426732 830450 830451 830460 830461 437356 460119 470193 581456
 app 455130 499270 455131
 
 not-public 42682 6067691797475126381  # Steam installed 2661317971072643596 until the update of 3 Sep 2026
 not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 until the update of 3 Sep 2026
+not-default 2656  # Call of Duty Low Violence, Optional (app 2620 on SteamDB)
+not-default 2668  # Call of Duty 2 Low Violence, Optional (app 2630 on SteamDB)
+not-default 7953  # call of duty 4: modern warfare german 2, Optional (app 7940 on SteamDB)
+not-default 7954  # call of duty 4: modern warfare german 3, Optional (app 7940 on SteamDB)
+not-default 7964  # call of duty 4: modern warfare german public, Optional (app 7940 on SteamDB)
+not-default 10097  # call of duty world at war low violence, Optional (app 10090 on SteamDB)
+not-default 10186  # Call of Duty Modern Warfare 2 LV DE content, Optional (app 10180 on SteamDB)
+not-default 42714  # Call of Duty Black Ops binaries sp LV Germany, Optional (app 42700 on SteamDB)
+
+name 2621 Call of Duty Content
+name 2623 Call of Duty English
+name 2641 Call of Duty United Offensive Content
+name 2642 Call of Duty: United Offensive English
+name 2631 Call of Duty 2 Content
+name 2632 Call of Duty 2 Main1
+name 2633 Call of Duty 2 Main2
+name 2634 Call of Duty 2 English
+name 7967 cod 4 dat
+name 7942 call of duty 4 modern warfare content 2
+name 7941 call of duty 4 modern warfare content
+name 7944 call of duty 4: modern warfare english 2
+name 7945 call of duty 4: modern warfare english 3
+name 7946 call of duty 4: modern warfare english 4
+name 7962 call of duty 4: modern warfare english public
+name 10091 Call of Duty: World at War content
+name 10092 Call of Duty: World at War English
+name 10182 Call of Duty Modern Warfare 2 content
+name 10181 Call of Duty Modern Warfare 2 binaries
+name 10183 Call of Duty: Modern Warfare 2 English
+name 10196 Call of Duty: Modern Warfare 2 - Resurgence Pack
+name 10195 Call of Duty: Modern Warfare 2 - Stimulus Pack
+name 10184 Call of Duty Modern Warfare 2 mp binaries
+name 42682 Call of Duty Modern Warfare 3 Content
+name 42681 Call of Duty Modern Warfare 3 SP Binaries
+name 42683 Call of Duty Modern Warfare 3 english
+name 42691 Call of Duty Modern Warfare 3 MP Binaries
+name 42695 Call of Duty Modern Warfare 3 - Collection 1
+name 42696 Call of Duty Modern Warfare 3 - Collection 2
+name 42697 Call of Duty Modern Warfare 3 - Collection 3
+name 42698 Call of Duty Modern Warfare 3 - Collection 4
+name 42719 Call of Duty: Black Ops Rezurrection DLC
+name 42723 Call of Duty: Black Ops - Annihilation SP DLC
+name 42718 Call of Duty: Black Ops - Escalation SP DLC
+name 42716 Call of Duty: Black Ops - First Strike DLC
+name 42702 call of duty black ops content
+name 42701 call of duty black ops binaries
+name 42703 Call of Duty Black Ops English
+name 42722 Call of Duty: Black Ops - Annihilation DLC
+name 42717 Call of Duty: Black Ops - Escalation DLC
+name 42715 Call of Duty: Black Ops - First Strike MP DLC
+name 42704 Call of Duty Black Ops mp binaries
+name 202972 Call of Duty: Black Ops II Content ALL
+name 202973 Call of Duty: Black Ops II Content SP-MP
+name 202975 Call of Duty: Black Ops II English ALL
+name 212931 Call of Duty: Black Ops II English SP-MP
+name 202998 Redists
+name 219094 Call of Duty: Black Ops II Soundtrack
+name 219091 Call of Duty: Black Ops II - Nuketown 2025
+name 202991 Call of Duty: Black Ops II MP EXE
+name 202992 Call of Duty: Black Ops II Content MP
+name 203001 Call of Duty: Black Ops II English MP
+name 233171 Revolution DLC MP English
+name 219097 Revolution DLC MP Content
+name 238801 Uprising DLC MP English
+name 219098 Uprising DLC MP Content
+name 247161 Vengeance DLC MP English
+name 219101 Vengeance DLC MP Content
+name 255561 Apocalypse DLC MP English
+name 219103 Apocalypse DLC MP Content
+name 219092 Call of Duty: Black Ops II - Nuketown Zombies
+name 212911 Call of Duty: Black Ops II ZM EXE
+name 212912 Call of Duty: Black Ops II Content ZM
+name 212921 Call of Duty: Black Ops II English ZM
+name 219096 Revolution DLC Zombies Content
+name 233181 Revolution DLC Zombies English
+name 219099 Uprising DLC Zombies Content
+name 238811 Uprising DLC Zombies English
+name 219102 Vengeance DLC Zombies Content
+name 247169 Vengeance DLC Zombies English
+name 219104 Apocalypse DLC Zombies Content
+name 255569 Apocalypse DLC Zombies English
+name 209161 Call of Duty: Ghosts Binaries-SP
+name 209162 Call of Duty: Ghosts Content-SP MP
+name 209163 Call of Duty: Ghosts Content-SP
+name 209172 Call of Duty: Ghosts English-Shared
+name 209171 Call of Duty: Ghosts Binaries-MP
+name 209164 Call of Duty: Ghosts Content-MP
+name 255164 Call of Duty: Ghosts - Free Fall DLC
+name 259250 Call of Duty: Ghosts - Onslaught DLC
+name 277330 Call of Duty: Ghosts - Onslaught English
+name 259251 Call of Duty: Ghosts - Devastation DLC
+name 277338 Call of Duty: Ghosts - Devastation English
+name 259252 Call of Duty: Ghosts - Invasion DLC
+name 277346 Call of Duty: Ghosts - Invasion English
+name 259253 Call of Duty: Ghosts - Nemesis DLC
+name 277354 Call of Duty: Ghosts - Nemesis English
+name 286635 Call of Duty: Ghosts - ANC1
+name 286636 Call of Duty: Ghosts - ANC2
+name 209651 Call of Duty: Advanced Warfare SP Binary
+name 209652 Call of Duty: Advanced Warfare SP Common
+name 310342 Call of Duty: Advanced Warfare - Shared Common
+name 310351 Call of Duty: Advanced Warfare - Shared Common Imagefiles
+name 310353 Call of Duty: Advanced Warfare - Shared Common Imagefiles5
+name 310352 Call of Duty: Advanced Warfare - Shared Common Soundfiles
+name 310343 Call of Duty: Advanced Warfare - Shared English
+name 310340 Call of Duty: Advanced Warfare - MP Binary
+name 310341 Call of Duty: Advanced Warfare - MP Common
+name 318794 Call of Duty: Advanced Warfare - Reckoning Map Pack (318794) Depot
+name 318793 Call of Duty: Advanced Warfare - Supremacy Map Pack (318793) Depot
+name 318792 Call of Duty: Advanced Warfare - Ascendance Map Pack (318792) Depot
+name 318791 Call of Duty: Advanced Warfare - Havoc Map Pack (318791) Depot
+name 318790 Call of Duty: Advanced Warfare - Atlas Gorge Map (318790) Depot
+name 317661 Call of Duty: Advanced Warfare - Ascendance English
+name 324231 Call of Duty: Advanced Warfare - Supremacy English
+name 334461 Call of Duty: Advanced Warfare - Reckoning English
+name 347770 Call of Duty: Advanced Warfare - Havoc English
+name 311211 Call of Duty Black Ops III Binary
+name 311212 Call of Duty: Black Ops III Core Content
+name 311213 Call of Duty: Black Ops III Core English
+name 366840 Call of Duty: Black Ops III CP Core
+name 311224 Call of Duty: Black Ops III CP English
+name 366841 Call of Duty: Black Ops III MP Core
+name 401140 Call of Duty: Black Ops III MP English
+name 366842 Call of Duty: Black Ops III ZM Core
+name 401151 Call of Duty: Black Ops III ZM English
+name 366848 Call of Duty: Black Ops III - NUK3TOWN Bonus Map (366848) Depot
+name 408631 Call of Duty: Black Ops III Nuk3town English
+name 366849 Call of Duty: Black Ops III - The Giant (366849) Depot
+name 408783 Call of Duty: Black Ops III The Giant English
+name 366844 Call of Duty: Black Ops III - Awakening DLC Pack (366844) Depot
+name 401162 Call of Duty: Black Ops III - Awakening English
+name 366845 Call of Duty: Black Ops III - Eclipse (366845) Depot
+name 408799 Call of Duty: Black Ops III - Eclipse English
+name 366846 Call of Duty: Black Ops III - Descent (366846) Depot
+name 408811 Call of Duty: Black Ops III - Descent English
+name 366847 Call of Duty: Black Ops III - Salvation (366847) Depot
+name 408823 Call of Duty: Black Ops III - Salvation English
+name 408835 Call of Duty: Black Ops III Core FF
+name 408836 Call of Duty: Black Ops III Core English FF
+name 408837 Call of Duty: Black Ops III MP FF
+name 408838 Call of Duty: Black Ops III MP English FF
+name 408839 Call of Duty: Black Ops III Awakening FF
+name 408840 Call of Duty: Black Ops III Awakening English FF
+name 408841 Call of Duty: Black Ops III Eclipse FF
+name 408842 Call of Duty: Black Ops III Eclipse English FF
+name 408843 Call of Duty: Black Ops III Descent FF
+name 408844 Call of Duty: Black Ops III Descent English FF
+name 408845 Call of Duty: Black Ops III Salvation FF
+name 408846 Call of Duty: Black Ops III Salvation English FF
+name 408847 Call of Duty: Black Ops III Nuk3town FF
+name 408848 Call of Duty: Black Ops III Nuketown English FF
+name 624760 Call of Duty: Black Ops III - 624760 (624760) Depot
+name 408849 Call of Duty: Black Ops III - DLC English
+name 581450 Call of Duty: Black Ops III - Zombies Chronicles
+name 426732 Call of Duty: Black Ops III - Zombies Chronicles English
+name 830450 Call of Duty: Black Ops III - Der Eisendrache Zombies Map (830450) Depot
+name 830451 Call of Duty: Black Ops III - Zetsubou No Shima Zombies Map (830451) Depot
+name 830460 Call of Duty: Black Ops III - Gorod Krovi Zombies Map (830460) Depot
+name 830461 Call of Duty: Black Ops III - Revelations Zombies Map (830461) Depot
+name 437356 Call of Duty: Black Ops III - Der Eisendrache Zombies English
+name 460119 Call of Duty: Black Ops III - Zetsubou No Shima Zombies Map English
+name 470193 Call of Duty: Black Ops III - Gorod Krovi Zombies Map English
+name 581456 Call of Duty: Black Ops III - Revelations Zombies Map English
+name 499270 Call of Duty: Black Ops III – Mod Tools Content Pack (499270) Depot
+name 455131 Call of Duty: Black Ops III – Mod Tools Content
+name 2668 Call of Duty 2 Low Violence
+name 10097 call of duty world at war low violence
+name 10186 Call of Duty Modern Warfare 2 LV DE content
+name 42621 Call of Duty: United Offensive English Mac
+name 42714 Call of Duty Black Ops binaries sp LV Germany
+name 2656 Call of Duty Low Violence
+name 7953 call of duty 4: modern warfare german 2
+name 7954 call of duty 4: modern warfare german 3
+name 7964 call of duty 4: modern warfare german public
+name 234771 Call of Duty: Black Ops II - DLC Range 2 Content
+name 292731 Call of Duty: Infinite Warfare Binary
+name 292732 Call of Duty: Infinite Warfare Common
+name 292733 Call of Duty: Infinite Warfare English
+name 292746 Call of Duty: Infinite Warfare - Sabotage English
+name 393081 Call of Duty: Modern Warfare Remastered - Single Player Binary
+name 393082 Call of Duty: Modern Warfare Remastered - Single Player Common
+name 393101 Call of Duty: Modern Warfare Remastered - Multiplayer Binary
+name 393102 Call of Duty: Modern Warfare Remastered - Multiplayer Common
+name 393103 Call of Duty: Modern Warfare Remastered - Shared Common
+name 393104 Call of Duty: Modern Warfare Remastered - Shared English
+name 393117 Call of Duty: Modern Warfare Remastered - Shared Imagefiles
+name 393118 Call of Duty: Modern Warfare Remastered - Variety Map Pack English
+name 394620 Call of Duty: Infinite Warfare - Campaign (394620) Depot
+name 394621 Call of Duty: Infinite Warfare - Multiplayer (394621) Depot
+name 394622 Call of Duty: Infinite Warfare - Zombies (394622) Depot
+name 420491 Call of Duty: Infinite Warfare - Sabotage DLC
+name 420492 Call of Duty: Infinite Warfare - Continuum DLC
+name 420493 Call of Duty: Infinite Warfare - Absolution DLC
+name 420494 Call of Duty: Infinite Warfare - Retribution DLC
+name 420497 Call of Duty: Infinite Warfare - Continuum English
+name 476601 Call of Duty: WWII - Campaign Binary
+name 476602 Call of Duty: WWII - Campaign Content
+name 476603 Call of Duty: WWII - GA
+name 476604 Call of Duty: WWII - MA
+name 476605 Call of Duty: WWII - GA English
+name 476606 Call of Duty: WWII - MA English
+name 476621 Call of Duty: WWII - MP Binary
+name 476622 Call of Duty: WWII - MP Content
+name 476623 Call of Duty: WWII - Shared Content
+name 476624 Call of Duty: WWII - Shared English
+name 476637 Call of Duty: WWII - DLC1 English
+name 517833 Call of Duty: Infinite Warfare - Absolution English
+name 537460 Call of Duty: Infinite Warfare Campaign English
+name 537473 Call of Duty: Infinite Warfare Multiplayer English
+name 537486 Call of Duty: Infinite Warfare Zombies English
+name 557366 Call of Duty: Infinite Warfare - Retribution English
+name 594970 Call of Duty: Modern Warfare Remastered - Variety Map Pack (594970) Depot
+name 631290 Call of Duty: WWII - DLC1
+name 631291 Call of Duty: WWII - DLC2
+name 631292 Call of Duty: WWII - DLC3
+name 683105 Call of Duty: WWII - DLC2 English
+name 716452 Call of Duty: WWII - DLC3 English
 
 2621 235916370645017959 2014-06-16T08:07:50Z
 2621 6788757365877935924 2013-04-16T00:47:39Z
@@ -46,7 +266,7 @@ not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 unti
 
 2641 3417320556416905624 2014-06-16T08:07:50Z
 
-42621 443939036136994768 2014-06-16T08:07:51Z
+2642 5930555561332439777 2014-06-16T08:07:50Z
 
 2631 1405908846368277444 2014-06-16T08:07:50Z
 
@@ -55,8 +275,6 @@ not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 unti
 2633 4670504702260915007 2014-06-16T08:07:50Z
 
 2634 5119545721494741081 2014-06-16T08:07:51Z
-
-2668 3467897680157547223 2014-06-16T08:07:51Z
 
 7967 6005281766938853887 2014-06-16T08:07:56Z
 
@@ -76,26 +294,21 @@ not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 unti
 
 10091 5566849738478017518 2014-06-16T08:07:58Z 5611397150
 
-10097 2802736360734339490 2014-06-16T08:07:58Z 4457264550
-
 10092 3607600095703252129 2014-06-16T08:07:58Z 4193416049
 
 10182 4763212243329962648 2026-09-03T16:01:41Z 4342862075
-10182 4063260329988186194 2023-08-01T23:49:51Z
+10182 4063260329988186194 2023-08-01T23:49:51Z 4435173418
 10182 7050448206564591918 2014-06-19T19:53:06Z
 10182 2773924775097085195 2011-11-23T14:35:29Z
 
 10181 3303535216987755639 2026-09-11T16:00:08Z 4604997
 10181 5551013591116506205 2026-09-03T16:01:41Z 4604997
-10181 6601306686778045038 2023-08-02T02:10:53Z
+10181 6601306686778045038 2023-08-02T02:10:53Z 3623526
 10181 1821736774583109547 2023-08-01T23:49:51Z
 10181 7385504947037106020 2014-06-19T19:53:06Z
 
-10186 6155459432830166023 2026-09-03T16:01:41Z 7779939097
-10186 6253063533272841787 2014-06-19T19:53:06Z
-
 10183 3746347210828885454 2026-09-03T16:01:41Z 7752636024
-10183 8707803059832053468 2014-06-19T19:53:07Z
+10183 8707803059832053468 2014-06-19T19:53:07Z 7723140879
 
 10196 1251041877935507292 2026-09-03T16:01:39Z 373547218
 10196 1027296475802215551 2014-06-16T08:07:58Z 372850898
@@ -104,7 +317,7 @@ not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 unti
 10195 4404426848645331640 2014-06-16T08:07:58Z 352805074
 
 10184 8851756244141656055 2026-09-11T16:00:03Z 5026055
-10184 104165688605043584 2026-09-03T16:01:39Z
+10184 104165688605043584 2026-09-03T16:01:39Z 5013255
 10184 908433931108303658 2023-08-02T02:11:31Z 4828879
 10184 4747870681483445925 2023-08-01T23:50:27Z
 10184 6865674089963406760 2018-04-26T17:05:16Z
@@ -155,8 +368,6 @@ not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 unti
 42702 6257032900290287777 2014-06-16T08:08:12Z 6565433500
 
 42701 5564723134361260769 2014-06-16T08:08:13Z 8096256
-
-42714 6472729729241488074 2014-06-16T08:08:13Z 8095232
 
 42703 8741537774138455205 2014-06-16T08:08:13Z 3044098831
 
@@ -576,6 +787,20 @@ not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 unti
 
 318790 2803495333091550192 2026-08-27T16:00:09Z
 318790 1858867507944457961 2014-11-03T19:04:36Z
+
+317661 869233381078461658 2026-08-27T16:00:09Z
+317661 4974123719394549476 2015-04-02T17:00:01Z
+
+324231 7380478583380162863 2026-08-27T16:00:09Z
+324231 2538506173373403673 2015-06-02T17:00:00Z
+
+334461 2100497487288250357 2026-08-27T16:00:09Z
+334461 7877729103290591318 2015-09-03T16:57:50Z
+334461 5067390395696658910 2015-07-09T17:00:23Z
+
+347770 6296575940714354676 2026-08-27T16:00:09Z
+347770 392449385480523482 2015-03-03T17:59:47Z
+347770 6351280519963880839 2015-02-04T18:00:42Z
 
 311211 8824612235115253119 2026-09-10T16:00:17Z 106059654
 311211 7651791086710252932 2026-02-19T17:04:55Z 105994622
@@ -1069,3 +1294,14 @@ not-public 42683 6381783964590594065  # Steam installed 1595601894688570808 unti
 455131 2284061487952839060 2018-03-06T18:06:28Z
 455131 443795720694374077 2017-12-11T17:59:39Z
 455131 3853987553574670140 2017-08-15T17:00:19Z
+
+2668 3467897680157547223 2014-06-16T08:07:51Z
+
+10097 2802736360734339490 2014-06-16T08:07:58Z 4457264550
+
+10186 6155459432830166023 2026-09-03T16:01:41Z 7779939097
+10186 6253063533272841787 2014-06-19T19:53:06Z
+
+42621 443939036136994768 2014-06-16T08:07:51Z
+
+42714 6472729729241488074 2014-06-16T08:08:13Z 8095232

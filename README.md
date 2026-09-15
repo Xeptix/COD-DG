@@ -52,8 +52,8 @@ in `SHA256SUMS`.
    - **Download the whole build into a folder of its own** leaves the installed game as it is. The
      first download defaults to `COD Downgrader` inside the game's Steam library, beside `steamapps`;
      later ones default to wherever the last one went. Anywhere outside `steamapps` works.
-   - **Save a patch folder** downloads only the files that differ from the latest build on Steam, to
-     put into the game later. See [Patch folders](#patch-folders).
+   - **Save a patch folder** downloads only the files that differ from another build, the latest on
+     Steam unless you pick one, to put into the game later. See [Patch folders](#patch-folders).
 4. For a whole build of an installed game, **start from your installed copy**. See below.
 5. **Sign in** to Steam with the account that owns the game.
 6. DepotDownloader downloads the build, or only the files that differ.
@@ -126,6 +126,29 @@ Apps that share a folder share content, so when a campaign and its Multiplayer a
 COD Downgrader offers to take the other app back to its build from the same time as well. Only files in
 the game's depots are ever touched: a client's or a mod's own files stay where they are.
 
+Steam personalizes some exes for your account when it installs a game, rewriting part of each and signing
+it: Black Ops's, Black Ops II's, and the Modern Warfare 2 and 3 campaign exes from before 3 Sep 2026.
+Steam only does this for the build it installs, so a build with a different exe gets Steam's original.
+Where the chosen build has the same exe as the installed one, COD Downgrader asks whether to keep your
+personalized copy or put Steam's original in its place.
+
+Before anything is downloaded, COD Downgrader asks which of the files that differ go in:
+
+- **Everything that differs**: the whole build.
+- **Only the content**: maps, fastfiles and every other file, keeping your installed exes and DLLs.
+- **Only the exes and DLLs**, keeping your installed content.
+- **Choose folders and files**: a checklist of every file that differs, grouped by folder, where a whole
+  folder is picked at once.
+
+The game's menu names the part written after the build, and Undo takes it out the same way.
+
+This is how a map pack or other DLC goes back to an earlier version while the game keeps its current exe.
+Most map packs changed after release: Black Ops II's and Black Ops III's DLC went through many versions,
+and Modern Warfare 2's Stimulus and Resurgence packs, Modern Warfare 3's Collections, and the map packs of
+Ghosts and Advanced Warfare changed again in August and September 2026. Modern Warfare 2's and Modern
+Warfare 3's content from before 3 Sep 2026, map packs included, is in the same fastfile format as the
+current builds.
+
 Steam still lists its latest build for the game. **Verify integrity of game files**, or Steam's next
 update of the game, brings latest files back, and a game with an update queued in Steam gets them when
 Steam installs it. The game's menu shows when Steam has changed the files since, and offers **Downgrade
@@ -133,15 +156,18 @@ again**.
 
 ## Patch folders
 
-**Save a patch folder** makes a minimal build: only the files that differ from the latest build on
-Steam, with `COD Downgrader patch.json` naming both builds, every file's SHA-1 and the files the patch
-removes. With one kept, the game can be downgraded again without downloading after Verify integrity of
-game files has put its latest files back.
+**Save a patch folder** makes a minimal build: only the files that differ from another build, with
+`COD Downgrader patch.json` naming both builds, every file's SHA-1 and the files the patch removes. It
+asks which build the patch starts from: the latest on Steam, the build installed in the game, or any
+other known build. The chosen version can be newer than that one, so a patch from an older build to the
+latest takes a downgraded game back up without Steam. With one kept, the game can be downgraded again without downloading after Verify integrity of
+game files has put its latest files back. It asks the same question as putting a build into the game, and
+the patch holds only the part chosen.
 
 **Apply a patch or a downloaded build to this game**, in the game's menu, puts a patch folder into the
 installed game the same way, after checking every file in the folder. A patch made from a different build
-than the game is on is flagged first. It takes a folder a whole build was downloaded into as well, and
-afterwards offers to delete that folder.
+than the game is on is flagged first. It takes a folder a whole build was downloaded into as well, asks
+which of its files go in, and afterwards offers to delete that folder.
 
 ## Signing in
 
@@ -164,6 +190,11 @@ whose contents are identical are copied. DepotDownloader then checks every file 
 piece by piece and downloads only the pieces that differ. When only the installed build's file list is
 known, its files are copied, and the ones the chosen build does not have are removed once the download
 has finished.
+
+Exes Steam personalizes for your account are never copied: DepotDownloader downloads Steam's originals.
+When your installed game has a personalized copy of the same exe, COD Downgrader asks once the download
+has finished whether the folder gets that copy or keeps Steam's original. Applying the folder to the game
+later accepts either.
 
 ## What ends up in the folder
 
@@ -272,7 +303,36 @@ rows of each changed depot from `steamdb.info/depot/<depot>/manifests/` into a t
 python tools/catalog.py add rows.txt
 ```
 
+Pages saved from the browser work as well. Save an app's Depots page, or a depot's Manifests page, into a
+folder and run:
+
+```
+python tools/catalog.py pages <folder> --write
+```
+
+It takes the manifest rows, each depot's name and owning app, and the depots a download of a game leaves
+out, such as low-violence content.
+
 ## Changelog
+
+### v1.0.2
+
+- Patch folders between any two builds: saving one asks which build it starts from, the latest on Steam,
+  the build installed, or any other known build, and a patch can go up to the latest build as well.
+- Part of a build: putting a build into the game, saving a patch folder and applying a folder ask which of
+  the files that differ go in. Everything, only the content with your exes and DLLs kept, only the exes and
+  DLLs, or folders and files picked from a list. Map packs and other DLC can go back to an earlier version
+  while the game keeps its current exe.
+- Where the chosen build has the same exe Steam personalized for your account in the installed game, COD
+  Downgrader asks whether to use that copy or Steam's original: when putting the build into the game, when
+  applying a downloaded build, and at the end of a download into a folder.
+- A download of a game that is not installed leaves out content Steam does not install with the game: the
+  low-violence versions of Call of Duty, Call of Duty 2, World at War, Modern Warfare 2 and Black Ops, and
+  Call of Duty 4's German depots. Modern Warfare 2's alone is 7.25 GB.
+- Depots are shown by name.
+- The built-in list's depots match SteamDB's: United Offensive takes its English content and the Call of Duty
+  content it runs on instead of a Mac depot, Advanced Warfare Multiplayer takes its four DLC maps' English
+  content, and Ghosts' and Advanced Warfare's shared content belongs to their Multiplayer apps.
 
 ### v1.0.1
 
@@ -294,3 +354,7 @@ First release.
 MIT, see [LICENSE](LICENSE). `CODDowngrader.exe` contains the .NET runtime and Spectre.Console, both
 MIT; their notices are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). DepotDownloader is GPL-2.0
 and is not part of this download.
+
+COD Downgrader is not affiliated with or endorsed by Activision, Valve or SteamDB. Call of Duty is a
+trademark of Activision Publishing, Inc.; Steam is a trademark of Valve Corporation. COD Downgrader
+contains no game files: every file it downloads comes from Steam, to an account that owns the game.

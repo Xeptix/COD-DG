@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using CODDowngrader.App;
 using CODDowngrader.Steam;
@@ -48,10 +49,10 @@ public static partial class ManifestLists
         }
     }
 
-    [GeneratedRegex(@"^\s*(\d+)\s+\d+\s+([0-9a-fA-F]{40})\s+[0-9a-fA-F]+\s+(\S.*?)\s*$")]
+    [GeneratedRegex(@"^\s*(\d+)\s+\d+\s+([0-9a-fA-F]{40})\s+([0-9a-fA-F]+)\s+(\S.*?)\s*$")]
     private static partial Regex ListingRowRegex();
 
-    /// <summary>The listing DepotDownloader's -manifest-only writes: size, chunk count, SHA-1, flags and name on each file's line.</summary>
+    /// <summary>The listing DepotDownloader's -manifest-only writes: size, chunk count, SHA-1, flags in hex and name on each file's line.</summary>
     public static IReadOnlyList<ManifestFile> ParseListing(IEnumerable<string> lines)
     {
         var files = new List<ManifestFile>();
@@ -59,11 +60,12 @@ public static partial class ManifestLists
         {
             var row = ListingRowRegex().Match(line);
             if (!row.Success || !ulong.TryParse(row.Groups[1].Value, out var size)) continue;
+            if (!uint.TryParse(row.Groups[3].Value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var flags)) flags = 0;
 
             // A folder is listed with no content: a zero SHA, where an empty file has the SHA-1 of nothing.
             var sha = row.Groups[2].Value.ToUpperInvariant();
-            var isFolder = size == 0 && sha.All(c => c == '0');
-            files.Add(new ManifestFile(ManifestFile.NormalizeName(row.Groups[3].Value), size, isFolder ? 0x40u : 0, isFolder ? null : sha));
+            var isFolder = (flags & 0x40) != 0 || (size == 0 && sha.All(c => c == '0'));
+            files.Add(new ManifestFile(ManifestFile.NormalizeName(row.Groups[4].Value), size, isFolder ? flags | 0x40u : flags, isFolder ? null : sha));
         }
         return files;
     }

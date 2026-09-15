@@ -20,6 +20,12 @@ public sealed class PatchRecord
     /// <summary>The build the patch turns the game into.</summary>
     public string Build { get; set; } = "";
 
+    /// <summary>The part of the build the patch holds, such as "content only"; null for all of it.</summary>
+    public string? Part { get; set; }
+
+    [JsonIgnore]
+    public string Title => Part is null ? Build : $"{Build}, {Part}";
+
     /// <summary>The build the patch is made from.</summary>
     public string From { get; set; } = "";
 
@@ -53,6 +59,13 @@ public sealed class AppliedRecord
     public List<uint> AppIds { get; set; } = new();
     public string Game { get; set; } = "";
     public string Build { get; set; } = "";
+
+    /// <summary>The part of the build written, such as "content only"; null for all of it.</summary>
+    public string? Part { get; set; }
+
+    [JsonIgnore]
+    public string Title => Part is null ? Build : $"{Build}, {Part}";
+
     public DateTimeOffset Applied { get; set; }
 
     /// <summary>False while files are being written, so a run that stopped part way can still be undone.</summary>

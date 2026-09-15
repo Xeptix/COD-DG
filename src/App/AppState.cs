@@ -45,6 +45,9 @@ public sealed class DownloadPart
     /// <summary>Depot to the files copied into this folder from the installed game for it, not yet checked against the download.</summary>
     public Dictionary<string, List<string>> CopiedFromInstall { get; set; } = new();
 
+    /// <summary>Files this folder holds the account's personalized copy of, from the installed game, instead of Steam's original: name to the copy's SHA-1.</summary>
+    public Dictionary<string, string> Personalized { get; set; } = new();
+
     public Dictionary<uint, ulong> ManifestMap() => Manifests
         .Where(kv => uint.TryParse(kv.Key, out _) && ulong.TryParse(kv.Value, out _))
         .ToDictionary(kv => uint.Parse(kv.Key, CultureInfo.InvariantCulture), kv => ulong.Parse(kv.Value, CultureInfo.InvariantCulture));

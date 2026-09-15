@@ -147,6 +147,7 @@ public sealed partial class Interactive
             part.Started = DateTimeOffset.Now;
             part.Finished = null;
             part.Skipped.Clear();
+            part.Personalized.Clear();
             part.SetManifests(manifests);
         }
         if (seed)
@@ -225,11 +226,66 @@ public sealed partial class Interactive
         if (skippedDlc.Count > 0)
             AnsiConsole.MarkupLine($"[yellow]Skipped DLC depots this account does not own: {string.Join(", ", skippedDlc)}.[/]");
 
+        if (game.Installed is { } installedGame && game.InstalledManifests is { } installedManifests && Directory.Exists(installedGame.InstallDir))
+        {
+            var built = depots.Where(d => finished.TryGetValue(d.Depot, out var m) && m == d.Manifest).ToDictionary(d => d.Depot, d => d.Manifest);
+            var copies = PersonalizedInInstall(library, installedGame.InstallDir, built, installedManifests, destination);
+            if (copies.Count > 0)
+            {
+                OfferPersonalized(destination, part, copies, installedGame.InstallDir);
+                AppState.SaveRecord(destination, record);
+            }
+        }
+
         AnsiConsole.MarkupLine($"[green]Done.[/] {Markup.Escape(destination)} holds {Markup.Escape(game.Name)}: {Markup.Escape(label)}.");
         AnsiConsole.MarkupLine("[grey]Steam does not manage this folder, so it never updates it.[/]");
         if (game.Installed is not null)
             AnsiConsole.MarkupLine("[grey]To put this build into the installed game instead, choose Apply a patch or a downloaded build in the game's menu.[/]");
         Pause();
+    }
+
+    /// <summary>
+    /// Offers a finished download the copies of its exes Steam personalized for the account in the installed game, and puts in the
+    /// one chosen. The folder's record keeps which files are personalized copies.
+    /// </summary>
+    static void OfferPersonalized(string destination, DownloadPart part, IReadOnlyList<PersonalizedCopy> copies, string installDir)
+    {
+        var inFolder = new List<(PersonalizedCopy Copy, bool IsPersonalized)>();
+        foreach (var copy in copies)
+        {
+            if (PatchApplier.PathIn(destination, copy.Name) is not { } path || !File.Exists(path)) continue;
+            var sha = FileHash.Sha1(path);
+            if (sha == copy.Sha || sha == copy.InstalledSha) inFolder.Add((copy, sha == copy.InstalledSha));
+        }
+        if (inFolder.Count == 0) return;
+
+        var usePersonalized = ChoosePersonalized(inFolder.Select(f => f.Copy).ToList(), inGame: false);
+        try
+        {
+            if (usePersonalized)
+            {
+                foreach (var (copy, isPersonalized) in inFolder)
+                {
+                    if (!isPersonalized) File.Copy(PatchApplier.PathIn(installDir, copy.Name)!, PatchApplier.PathIn(destination, copy.Name)!, overwrite: true);
+                    part.Personalized[copy.Name] = copy.InstalledSha;
+                }
+                return;
+            }
+
+            // DepotDownloader never checks a file of a finished depot again, but it downloads one that is missing.
+            var replaced = inFolder.Where(f => f.IsPersonalized).Select(f => f.Copy.Name).ToList();
+            foreach (var name in replaced)
+            {
+                File.Delete(PatchApplier.PathIn(destination, name)!);
+                part.Personalized.Remove(name);
+            }
+            if (replaced.Count > 0)
+                AnsiConsole.MarkupLine($"[yellow]Choose the same version and folder again, and DepotDownloader downloads Steam's original of {Markup.Escape(string.Join(", ", replaced))}.[/]");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(e.Message)}[/]");
+        }
     }
 
     static void ShowFailure(RunOutcome run, IReadOnlyCollection<uint> notDownloaded, string logPath)

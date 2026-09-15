@@ -104,20 +104,26 @@ public static class PatchApplier
     }
 
     /// <summary>The files of <paramref name="writes"/> that are missing from <paramref name="folder"/> or are not the build's version.</summary>
-    public static List<PatchWrite> Missing(string folder, IEnumerable<PatchWrite> writes, Action<long>? read = null)
+    /// <param name="personalized">Files the folder holds the account's personalized copy of instead of Steam's original, by that copy's SHA-1.</param>
+    public static List<PatchWrite> Missing(string folder, IEnumerable<PatchWrite> writes, Action<long>? read = null,
+        IReadOnlyDictionary<string, string>? personalized = null)
     {
         var bad = new List<PatchWrite>();
         foreach (var write in writes)
         {
             var path = PathIn(folder, write.Name);
             var info = path is null ? null : new FileInfo(path);
-            if (info is null || !info.Exists || (ulong)info.Length != write.Size)
+            string? copy = null;
+            var isCopy = personalized?.TryGetValue(write.Name, out copy) == true;
+            if (info is null || !info.Exists || (!isCopy && (ulong)info.Length != write.Size))
             {
                 bad.Add(write);
                 read?.Invoke((long)write.Size);
                 continue;
             }
-            if (write.Sha.Length > 0 && FileHash.Sha1(info.FullName, read) != write.Sha) bad.Add(write);
+            if (write.Sha.Length == 0) continue;
+            var sha = FileHash.Sha1(info.FullName, read);
+            if (sha != write.Sha && sha != copy) bad.Add(write);
         }
         return bad;
     }

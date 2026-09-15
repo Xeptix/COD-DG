@@ -19,9 +19,8 @@ public sealed partial class Interactive
         if (game.Installed is { } app && Directory.Exists(app.InstallDir) && !isInstalled)
             items.Add(new Item("Put it into the installed game: download only the files that differ and swap them in", "inplace"));
         items.Add(new Item("Download the whole build into a folder of its own", "folder"));
-        var patchBase = PatchBase(game, history);
-        if (patchBase.Count > 0 && !manifests.All(m => patchBase.TryGetValue(m.Key, out var v) && v == m.Value))
-            items.Add(new Item($"Save a patch folder: only the files that differ from {PatchBaseName(game)}", "patch"));
+        if (PatchSources(game, history, manifests) is { Count: > 0 } sources)
+            items.Add(new Item($"Save a patch folder: only the files that differ from {(sources.Count > 1 ? "a build you pick" : Markup.Escape(sources[0].Title))}", "patch"));
         items.Add(new Item("Back", "back"));
 
         switch (Prompt("How?", items).Kind)
@@ -33,18 +32,43 @@ public sealed partial class Interactive
                 await DownloadAsync(library, game, manifests, owners, label, tag);
                 break;
             case "patch":
-                await SavePatchAsync(library, game, manifests, owners, label, tag, patchBase);
+                await SavePatchAsync(library, game, history, manifests, owners, label, tag);
                 break;
         }
     }
 
-    /// <summary>What a patch folder is made from: Steam's latest build, or the newest build known when Steam on this PC has no product info for the game.</summary>
-    static IReadOnlyDictionary<uint, ulong> PatchBase(GameEntry game, BuildHistoryResult history) =>
-        game.LatestManifests
-        ?? history.Builds.FirstOrDefault(b => b.ReplacedBy is null && b.Unknown.Count == 0)?.Manifests
-        ?? new Dictionary<uint, ulong>();
+    /// <summary>
+    /// The builds a patch to <paramref name="manifests"/> can be made from: every build with all its manifests known that differs
+    /// from it in a depot it has. Steam's latest build comes first, or the newest known build when Steam on this PC has no product
+    /// info for the game.
+    /// </summary>
+    static List<(Build Build, string Title)> PatchSources(GameEntry game, BuildHistoryResult history, IReadOnlyDictionary<uint, ulong> manifests)
+    {
+        var titles = Format.BuildTitles(game, history.Builds);
+        var sources = history.Builds.Select((b, i) => (Build: b, Title: titles[i]))
+            .Where(s => s.Build.Unknown.Count == 0 && s.Build.Manifests.Count > 0
+                        && manifests.Any(m => !s.Build.Manifests.TryGetValue(m.Key, out var v) || v != m.Value))
+            .ToList();
 
-    static string PatchBaseName(GameEntry game) => game.LatestManifests is not null ? "the latest build on Steam" : "the newest known build";
+        var first = sources.FindIndex(s => s.Build.Kind == BuildKind.Latest);
+        if (first < 0 && game.LatestManifests is { } latest) first = sources.FindIndex(s => SameManifests(s.Build.Manifests, latest));
+        if (first < 0) first = sources.FindIndex(s => s.Build.ReplacedBy is null);
+        if (first > 0)
+        {
+            var source = sources[first];
+            sources.RemoveAt(first);
+            sources.Insert(0, source);
+        }
+        return sources;
+    }
+
+    /// <summary>What a patch says it was made from. The installed build goes by its build ID, since it stops being the installed one.</summary>
+    static string PatchFromName(GameEntry game, Build build, string title) => build.Kind switch
+    {
+        BuildKind.Installed => game.Installed is { BuildId: > 0 } app ? $"Build {app.BuildId}" : "The build installed when the patch was made",
+        BuildKind.Latest => $"Latest on Steam{(game.Info?.PublicBuildId is { } id ? $" (build {id})" : "")}",
+        _ => title,
+    };
 
     static bool SameManifests(IReadOnlyDictionary<uint, ulong> a, IReadOnlyDictionary<uint, ulong> b) =>
         a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out var v) && v == kv.Value);
@@ -70,14 +94,14 @@ public sealed partial class Interactive
         if (applied is null) yield break;
         var state = PatchApplier.StateOf(applied, FolderManifests(library, applied.InstallDir));
         if (state is DowngradeState.FilesChanged or DowngradeState.SteamUpdated)
-            yield return new Item($"Downgrade again: {Markup.Escape(applied.Build)}", "again");
+            yield return new Item($"Downgrade again: {Markup.Escape(applied.Title)}", "again");
         yield return new Item("Undo the downgrade", "undo");
     }
 
     bool RefuseSecondDowngrade(string installDir)
     {
         if (PatchStore.AppliedTo(installDir) is not { } earlier) return false;
-        AnsiConsole.MarkupLine($"[yellow]This folder already has a build written into it: {Markup.Escape(earlier.Game)}, {Markup.Escape(earlier.Build)}. Undo that in the game's menu first.[/]");
+        AnsiConsole.MarkupLine($"[yellow]This folder already has a build written into it: {Markup.Escape(earlier.Game)}, {Markup.Escape(earlier.Title)}. Undo that in the game's menu first.[/]");
         Pause();
         return true;
     }
@@ -141,7 +165,9 @@ public sealed partial class Interactive
             Pause();
             return;
         }
-        if (plan.Writes.Count == 0 && plan.Removes.Count == 0)
+        var changing = new HashSet<string>(plan.Writes.Select(w => w.Name), PathRules.Comparer);
+        var copies = PersonalizedInInstall(library, app.InstallDir, target, folder, staging).Where(c => !changing.Contains(c.Name)).ToList();
+        if (plan.Writes.Count == 0 && plan.Removes.Count == 0 && copies.Count == 0)
         {
             AnsiConsole.MarkupLine("[green]The installed files are already this build.[/]");
             Pause();
@@ -154,12 +180,20 @@ public sealed partial class Interactive
         ShowPlan(library, game, plan, check);
         if (check.Locked.Count > 0)
             AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(check.Locked[0])} is in use, so close the game before the files are swapped in.[/]");
+        if (ChoosePart(plan, check.AlreadyThere) is not { } choice)
+        {
+            DeleteIfOnlyFileLists(staging);
+            return;
+        }
+        plan = plan.Only(choice.Includes);
+        copies = copies.Where(c => choice.Includes(c.Name)).ToList();
+        if (copies.Count > 0 && !ChoosePersonalized(copies, inGame: true)) plan = WithOriginals(plan, copies);
 
         var writes = plan.Writes.Where(w => !check.AlreadyThere.Contains(w.Name)).ToList();
         var size = writes.Aggregate(0UL, (sum, w) => sum + w.Size);
         if (writes.Count == 0 && plan.Removes.Count == 0)
         {
-            AnsiConsole.MarkupLine("[green]The installed files are already this build.[/]");
+            AnsiConsole.MarkupLine(choice.Label is null ? "[green]The installed files are already this build.[/]" : "[green]Those files are already this build.[/]");
             Pause();
             return;
         }
@@ -185,14 +219,14 @@ public sealed partial class Interactive
             return;
         }
 
-        if (!await ApplyPlanAsync(library, apps, label, plan, check.AlreadyThere, staging, move: true, target, owner))
+        if (!await ApplyPlanAsync(library, apps, label, plan, check.AlreadyThere, staging, move: true, target, owner, choice.Label))
         {
             Pause();
             return;
         }
         TryDelete(staging);
 
-        AnsiConsole.MarkupLine($"[green]Done.[/] {Markup.Escape(names)} in {Markup.Escape(app.InstallDir)} is now {Markup.Escape(label)}.");
+        AnsiConsole.MarkupLine($"[green]Done.[/] {Markup.Escape(names)} in {Markup.Escape(app.InstallDir)} is now {Markup.Escape(TitleOf(label, choice.Label))}.");
         AnsiConsole.MarkupLine("[grey]Steam still lists its latest build for the game. Verify integrity of game files, or Steam's next update of the game, brings latest files back; the game's menu here then offers to downgrade it again. Undo takes the downgrade out.[/]");
         Pause();
     }
@@ -206,10 +240,27 @@ public sealed partial class Interactive
 
     // --- a patch folder ---------------------------------------------------------------------
 
-    async Task SavePatchAsync(GameLibrary library, GameEntry game, IReadOnlyDictionary<uint, ulong> manifests,
-        IReadOnlyDictionary<uint, uint> owners, string label, string tag, IReadOnlyDictionary<uint, ulong> patchBase)
+    async Task SavePatchAsync(GameLibrary library, GameEntry game, BuildHistoryResult history, IReadOnlyDictionary<uint, ulong> manifests,
+        IReadOnlyDictionary<uint, uint> owners, string label, string tag)
     {
-        if (AskFolder(library, game, $"{game.Name} (patch to {tag})") is not { } folder) return;
+        var sources = PatchSources(game, history, manifests);
+        if (sources.Count == 0) return;
+        var from = sources[0];
+        if (sources.Count > 1)
+        {
+            var pick = Prompt("Patch from which build?", sources
+                .Select(s => new Item(Markup.Escape(s.Title) + $"[grey]{Markup.Escape(Format.BuildDetail(library, game, s.Build))}[/]", "build", s))
+                .Append(new Item("Back", "back"))
+                .ToList());
+            if (pick.Kind != "build") return;
+            from = ((Build Build, string Title))pick.Value!;
+        }
+        var patchBase = from.Build.Manifests;
+        var fromName = PatchFromName(game, from.Build, from.Title);
+        var folderName = from.Build == sources[0].Build
+            ? $"{game.Name} (patch to {tag})"
+            : $"{game.Name} (patch {FolderTag(game, from.Build, withTime: from.Title != Format.BuildTitle(game, from.Build))} to {tag})";
+        if (AskFolder(library, game, folderName) is not { } folder) return;
 
         var baseManifests = manifests.Keys.Where(patchBase.ContainsKey).ToDictionary(d => d, d => patchBase[d]);
         var existing = PatchStore.LoadPatch(folder);
@@ -236,11 +287,19 @@ public sealed partial class Interactive
         }
 
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[bold]{Markup.Escape(game.Name)}[/]: a patch from {PatchBaseName(game)} to {Markup.Escape(label)}");
+        AnsiConsole.MarkupLine($"[bold]{Markup.Escape(game.Name)}[/]: a patch from {Markup.Escape(fromName)} to {Markup.Escape(label)}");
         ShowPlan(library, game, plan, null);
         if (plan.Writes.Count == 0 && plan.Removes.Count == 0)
         {
             AnsiConsole.MarkupLine("[green]Those two builds have the same files.[/]");
+            Pause();
+            return;
+        }
+        if (ChoosePart(plan, null) is not { } choice) return;
+        plan = plan.Only(choice.Includes);
+        if (plan.Writes.Count == 0 && plan.Removes.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No files were chosen.[/]");
             Pause();
             return;
         }
@@ -255,9 +314,8 @@ public sealed partial class Interactive
             AppIds = new List<uint> { game.AppId },
             Game = game.Name,
             Build = label,
-            From = game.LatestManifests is not null
-                ? $"Latest on Steam{(game.Info?.PublicBuildId is { } id ? $" (build {id})" : "")}"
-                : "Newest build on the built-in list",
+            Part = choice.Label,
+            From = fromName,
             Created = DateTimeOffset.Now,
             BaseManifests = IdMap.Write(baseManifests),
             TargetManifests = IdMap.Write(manifests),
@@ -284,7 +342,7 @@ public sealed partial class Interactive
         TryDelete(Path.Combine(folder, ".DepotDownloader"));
 
         var bytes = record.Files.Aggregate(0UL, (sum, f) => sum + f.Size);
-        AnsiConsole.MarkupLine($"[green]Done.[/] {Markup.Escape(folder)} holds a patch from {PatchBaseName(game)} to {Markup.Escape(label)}: {record.Files.Count} files, {Format.Size(bytes)}.");
+        AnsiConsole.MarkupLine($"[green]Done.[/] {Markup.Escape(folder)} holds a patch from {Markup.Escape(fromName)} to {Markup.Escape(TitleOf(label, choice.Label))}: {record.Files.Count} files, {Format.Size(bytes)}.");
         AnsiConsole.MarkupLine($"[grey]To use it, choose {ApplyItem} in the game's menu.[/]");
         Pause();
     }
@@ -313,9 +371,12 @@ public sealed partial class Interactive
 
         var installedNow = FolderManifests(library, app.InstallDir);
         PatchPlan plan;
+        IReadOnlyDictionary<string, string>? personalized = null;
+        var copies = new List<PersonalizedCopy>();
         IReadOnlyDictionary<uint, ulong> target;
         IReadOnlyDictionary<uint, uint> owners;
         string build;
+        string? builtPart = null;
         var mixes = false;
 
         if (PatchStore.LoadPatch(folder) is { } patch)
@@ -338,6 +399,7 @@ public sealed partial class Interactive
             target = IdMap.Manifests(patch.TargetManifests);
             owners = IdMap.Owners(patch.Owners);
             build = patch.Build;
+            builtPart = patch.Part;
         }
         else if (AppState.LoadRecord(folder, out _)?.For(game.AppId) is { Complete: true } part)
         {
@@ -362,6 +424,13 @@ public sealed partial class Interactive
             }
             var kept = installedNow.Where(f => !targetLists.ContainsKey(f.Key)).Select(f => library.Files(f.Key, f.Value)).ToList();
             plan = PatchPlan.Compute(baseLists, targetLists, kept);
+            personalized = new Dictionary<string, string>(part.Personalized, PathRules.Comparer);
+
+            // An exe the game keeps as it is can take the folder's copy instead, when that is Steam's original.
+            var changing = new HashSet<string>(plan.Writes.Select(w => w.Name), PathRules.Comparer);
+            copies = PersonalizedInInstall(library, app.InstallDir, target, installedNow, folder)
+                .Where(c => !changing.Contains(c.Name) && PatchApplier.PathIn(folder, c.Name) is { } path && File.Exists(path) && FileHash.Sha1(path) == c.Sha)
+                .ToList();
         }
         else
         {
@@ -372,7 +441,7 @@ public sealed partial class Interactive
 
         var check = await CheckAsync(app.InstallDir, plan);
         var writes = plan.Writes.Where(w => !check.AlreadyThere.Contains(w.Name)).ToList();
-        if (writes.Count == 0 && plan.Removes.Count == 0)
+        if (writes.Count == 0 && plan.Removes.Count == 0 && copies.Count == 0)
         {
             AnsiConsole.MarkupLine("[green]The installed files are already this build.[/]");
             Pause();
@@ -380,7 +449,7 @@ public sealed partial class Interactive
         }
 
         // Every file has to be there and whole before anything in the game changes.
-        var bad = await VerifyAsync(folder, writes, "Checking the files in that folder");
+        var bad = await VerifyAsync(folder, writes, "Checking the files in that folder", personalized);
         if (bad.Count > 0)
         {
             AnsiConsole.MarkupLine($"[red]{bad.Count} files are missing from that folder or damaged, {Markup.Escape(bad[0].Name)} among them. Nothing in the game was changed.[/]");
@@ -399,16 +468,33 @@ public sealed partial class Interactive
                 AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(sibling.Name)} is installed in the same folder and uses depots {string.Join(", ", shared)}, which this changes.[/]");
         }
 
+        if (ChoosePart(plan, check.AlreadyThere) is not { } choice) return;
+        plan = plan.Only(choice.Includes);
+        copies = copies.Where(c => choice.Includes(c.Name)).ToList();
+        builtPart = choice.Label ?? builtPart;
+        writes = plan.Writes.Where(w => !check.AlreadyThere.Contains(w.Name)).ToList();
+        if (copies.Count > 0 && !ChoosePersonalized(copies, inGame: true))
+        {
+            plan = WithOriginals(plan, copies);
+            writes = plan.Writes.Where(w => !check.AlreadyThere.Contains(w.Name)).ToList();
+        }
+        if (writes.Count == 0 && plan.Removes.Count == 0)
+        {
+            AnsiConsole.MarkupLine(choice.Label is null ? "[green]The installed files are already this build.[/]" : "[green]Those files are already this build.[/]");
+            Pause();
+            return;
+        }
+
         var size = writes.Aggregate(0UL, (sum, w) => sum + w.Size);
         var removing = plan.Removes.Count > 0 ? $" and remove {plan.Removes.Count}" : "";
         if (!AnsiConsole.Confirm($"Copy {writes.Count} files ({Format.Size(size)}) into the game{removing}?", !mixes)) return;
-        if (!await ApplyPlanAsync(library, new[] { game }, build, plan, check.AlreadyThere, folder, move: false, target, owners))
+        if (!await ApplyPlanAsync(library, new[] { game }, build, plan, check.AlreadyThere, folder, move: false, target, owners, builtPart))
         {
             Pause();
             return;
         }
 
-        AnsiConsole.MarkupLine($"[green]Done.[/] {Markup.Escape(game.Name)} in {Markup.Escape(app.InstallDir)} is now {Markup.Escape(build)}.");
+        AnsiConsole.MarkupLine($"[green]Done.[/] {Markup.Escape(game.Name)} in {Markup.Escape(app.InstallDir)} is now {Markup.Escape(TitleOf(build, builtPart))}.");
         var folderSize = FolderSize(folder);
         if (AnsiConsole.Confirm($"Delete {Markup.Escape(folder)}{(folderSize is { } s ? $" ({Format.Size(s)})" : "")}? The game has what it needs from it.", false))
             TryDelete(folder);
@@ -421,7 +507,7 @@ public sealed partial class Interactive
     /// <summary>A line for the game's menu about the build written into its folder.</summary>
     static string DowngradeStatus(GameLibrary library, AppliedRecord record)
     {
-        var what = $"{Markup.Escape(record.Build)}, written into this folder on {Format.Date(record.Applied)}";
+        var what = $"{Markup.Escape(record.Title)}, written into this folder on {Format.Date(record.Applied)}";
         return PatchApplier.StateOf(record, FolderManifests(library, record.InstallDir)) switch
         {
             DowngradeState.Intact => $"[green]Downgraded in place: {what}.[/] [grey]Steam still lists its latest build.[/]",

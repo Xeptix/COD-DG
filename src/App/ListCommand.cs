@@ -40,7 +40,7 @@ public static class ListCommand
                     Patching.DowngradeState.FilesChanged => "Steam has put back some of its files since",
                     _ => "Steam has updated the game since",
                 };
-                Console.WriteLine($"  written into this folder on {Format.DateTime(applied.Applied)}: {applied.Build} ({state}{(applied.Backup is null ? "" : ", backup kept")})");
+                Console.WriteLine($"  written into this folder on {Format.DateTime(applied.Applied)}: {applied.Title} ({state}{(applied.Backup is null ? "" : ", backup kept")})");
             }
 
             if (!game.Downgradable)

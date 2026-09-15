@@ -65,7 +65,7 @@ public sealed partial class Interactive
             var notes = new List<string> { $"build {app.BuildId}" };
             if (older > 0) notes.Add(older == 1 ? "1 older build" : $"{older} older builds");
             if (app.UpdatePending) notes.Add("update queued");
-            if (DowngradeOf(game) is { } applied) notes.Add($"downgraded in place: {applied.Build}");
+            if (DowngradeOf(game) is { } applied) notes.Add($"downgraded in place: {applied.Title}");
             if (!game.Downgradable) notes.Add("online-only");
             items.Add(new Item($"{Markup.Escape(game.Name)} [grey]{Markup.Escape(string.Join(" · ", notes))}[/]", "game", game));
         }

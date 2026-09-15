@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>CODDowngrader</AssemblyName>
     <RootNamespace>CODDowngrader</RootNamespace>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Product>COD Downgrader</Product>
     <Description>Download any build of a Call of Duty you own on Steam, into your installed game or into a folder of its own.</Description>
     <Authors>Xep</Authors>

@@ -37,6 +37,14 @@ public sealed class PatchPlan
 
     public ulong WriteBytes => Writes.Aggregate(0UL, (sum, w) => sum + w.Size);
 
+    /// <summary>The part of the plan whose files <paramref name="includes"/> takes. The rest of the folder stays as it is.</summary>
+    public PatchPlan Only(Func<string, bool> includes) =>
+        new(Writes.Where(w => includes(w.Name)).ToList(), Removes.Where(r => includes(r.Name)).ToList(), RemovesKnown);
+
+    /// <summary>An exe or a DLL: the game's code, as against its content.</summary>
+    public static bool IsBinary(string name) =>
+        name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
+
     /// <param name="baseLists">The base build's file list of each changed depot. A depot the base build does not have is left out.</param>
     /// <param name="targetLists">The target build's file list of each changed depot.</param>
     /// <param name="keptLists">The file lists of the folder's depots that stay as they are; null for one that could not be read.</param>
@@ -73,7 +81,7 @@ public sealed class PatchPlan
     }
 
     /// <summary>Every file of the lists by path. Where two depots have the same file, the higher depot's is the one kept.</summary>
-    static Dictionary<string, (uint Depot, ManifestFile File)> Merge(IReadOnlyDictionary<uint, IReadOnlyList<ManifestFile>> lists)
+    internal static Dictionary<string, (uint Depot, ManifestFile File)> Merge(IReadOnlyDictionary<uint, IReadOnlyList<ManifestFile>> lists)
     {
         var merged = new Dictionary<string, (uint, ManifestFile)>(PathRules.Comparer);
         foreach (var (depot, files) in lists.OrderBy(l => l.Key))
