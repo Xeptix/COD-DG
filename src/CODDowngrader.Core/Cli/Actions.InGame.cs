@@ -212,6 +212,7 @@ public static partial class Actions
         }
 
         Directory.CreateDirectory(destination);
+        RememberDestination(destination);
         var record = new PatchRecord
         {
             AppIds = new List<uint> { game.AppId },

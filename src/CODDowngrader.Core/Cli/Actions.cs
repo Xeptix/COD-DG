@@ -110,6 +110,7 @@ public static partial class Actions
         if (sizes.All(s => s is not null) && !EnoughSpace(run, destination, (ulong)sizes.Sum(s => (long)s!.Value))) return (int)ExitCode.Failed;
 
         Directory.CreateDirectory(destination);
+        RememberDestination(destination);
         record ??= new DownloadRecord();
         if (part is null)
         {
@@ -423,17 +424,23 @@ public static partial class Actions
             ["url"] = n.Url,
         }).ToArray());
 
-    /// <summary>Where a download or a patch goes: --to, or a folder named after the game beside the Steam library.</summary>
+    /// <summary>
+    /// Where a download or a patch goes: --to, or a folder named after the build in the folder the last one went into, as the
+    /// menus suggest it, or in COD Downgrader beside the game's Steam library the first time.
+    /// </summary>
     static string? Destination(Job run, GameLibrary library, GameEntry game, string name, out string? error)
     {
         error = null;
         var answer = run.Settings.To;
-        var root = game.Installed?.Library ?? library.Steam.Libraries.FirstOrDefault() ?? library.Steam.Root;
+        var libraryRoot = game.Installed?.Library ?? library.Steam.Libraries.FirstOrDefault() ?? library.Steam.Root;
+        var root = AppState.LoadSettings().LastDestinationRoot is { Length: > 0 } saved && Directory.Exists(saved)
+            ? saved
+            : Path.Combine(libraryRoot, "COD Downgrader");
         try
         {
             var path = PathRules.Normalize(answer is { Length: > 0 }
                 ? answer.Trim().Trim('"')
-                : Path.Combine(root, "COD Downgrader", Interactive.Safe(name)));
+                : Path.Combine(root, Interactive.Safe(name)));
 
             if (Path.GetPathRoot(path) is { Length: > 0 } driveRoot && PathRules.Same(driveRoot, path))
             {
@@ -452,6 +459,16 @@ public static partial class Actions
             error = e.Message;
             return null;
         }
+    }
+
+    /// <summary>The folder a download or a patch went into, kept so the next one is suggested beside it, whichever face asks.</summary>
+    static void RememberDestination(string destination)
+    {
+        if (Path.GetDirectoryName(destination) is not { Length: > 0 } parent) return;
+        var settings = AppState.LoadSettings();
+        if (PathRules.Comparer.Equals(settings.LastDestinationRoot, parent)) return;
+        settings.LastDestinationRoot = parent;
+        AppState.SaveSettings(settings);
     }
 
     /// <summary>False once the failure has been reported: the drive holding the folder has less room than the download needs.</summary>

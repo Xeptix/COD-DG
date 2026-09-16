@@ -54,9 +54,9 @@ in `SHA256SUMS`.
 3. **Choose what to do with it.**
    - **Put it into the game** downloads only the files that differ from what is installed, and swaps
      them in. See [Into the installed game](#into-the-installed-game).
-   - **Download into a folder of its own** leaves the installed game as it is. The folder starts as
-     `COD Downgrader` inside the game's Steam library, beside `steamapps`; anywhere outside `steamapps`
-     works. See [What ends up in the folder](#what-ends-up-in-the-folder).
+   - **Download into a folder of its own** leaves the installed game as it is. The first download goes into
+     `COD Downgrader` inside the game's Steam library, beside `steamapps`, and later ones default to wherever
+     the last one went; anywhere outside `steamapps` works. See [What ends up in the folder](#what-ends-up-in-the-folder).
    - **Save a patch folder** downloads only the files that differ from another build, to put into the
      game later. See [Patch folders](#patch-folders).
 4. COD Downgrader works out **what changes** and shows it before anything happens: how many files, how
@@ -387,7 +387,7 @@ when Steam fetched it, when SteamDB first saw it and whether it is only remember
 
 | Option | What it does |
 |---|---|
-| `--to <folder>` | Where a download, a patch, an export or a shared build goes |
+| `--to <folder>` | Where a download, a patch, an export or a shared build goes. Left out, a download or a patch goes where the last one went |
 | `--from <build\|folder>` | `patch`: the build it starts from. `apply`: the folder to take |
 | `--only <what>` | `all` (the default), `content` (keep your exes and DLLs), or `binaries` |
 | `--files <name,name>` | Only these files of the build, instead of `--only` |
@@ -541,6 +541,10 @@ It takes the manifest rows, each depot's name and owning app, and the depots a d
 out, such as low-violence content.
 
 ## Changelog
+
+### v1.1.1
+
+- The window and the command line suggest the folder the last download or patch went into, as the menus always have.
 
 ### v1.1.0
 
