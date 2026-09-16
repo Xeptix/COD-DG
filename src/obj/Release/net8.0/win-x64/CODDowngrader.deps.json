@@ -7,7 +7,7 @@
   "targets": {
     ".NETCoreApp,Version=v8.0": {},
     ".NETCoreApp,Version=v8.0/win-x64": {
-      "CODDowngrader/1.0.2": {
+      "CODDowngrader/1.0.3": {
         "dependencies": {
           "Microsoft.NET.ILLink.Tasks": "8.0.28",
           "Spectre.Console": "0.57.2",
@@ -716,7 +716,7 @@
     }
   },
   "libraries": {
-    "CODDowngrader/1.0.2": {
+    "CODDowngrader/1.0.3": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

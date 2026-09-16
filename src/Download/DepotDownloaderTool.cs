@@ -198,7 +198,10 @@ public static partial class DepotDownloaderTool
         "encountered", "insufficient privileges",
     };
 
-    public static async Task<DepotDownloaderResult> RunAsync(string exe, IReadOnlyList<string> arguments, string logPath, CancellationToken ct = default)
+    /// <param name="mirror">Where DepotDownloader's own output goes; null for this console. A caller printing JSON on
+    /// stdout sends it to stderr, so what it prints stays the only thing on stdout.</param>
+    public static async Task<DepotDownloaderResult> RunAsync(string exe, IReadOnlyList<string> arguments, string logPath,
+        CancellationToken ct = default, TextWriter? mirror = null)
     {
         var result = new DepotDownloaderResult();
         var psi = new ProcessStartInfo(exe)
@@ -245,8 +248,8 @@ public static partial class DepotDownloaderTool
                 {
                 }
             });
-            var stdout = Pump(process.StandardOutput, Console.Out, () => log, v => log = v, gate, result);
-            var stderr = Pump(process.StandardError, Console.Error, () => log, v => log = v, gate, result);
+            var stdout = Pump(process.StandardOutput, mirror ?? Console.Out, () => log, v => log = v, gate, result);
+            var stderr = Pump(process.StandardError, mirror ?? Console.Error, () => log, v => log = v, gate, result);
             await Task.WhenAll(stdout, stderr);
             await process.WaitForExitAsync();
             result.ExitCode = process.ExitCode;

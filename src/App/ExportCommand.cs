@@ -64,8 +64,13 @@ public static partial class ExportCommand
     public const int FileFormat = 1;
     public const string JsonEntry = "export.json";
 
-    public static int Run(SteamInstall steam, string target)
+    public static int Run(SteamInstall steam, string target) => Run(steam, target, quiet: false, out _);
+
+    /// <param name="quiet">Say nothing: the caller reports it, as the command line's --json does.</param>
+    /// <param name="written">The zip, once there is one.</param>
+    public static int Run(SteamInstall steam, string target, bool quiet, out string? written)
     {
+        written = null;
         string path;
         try
         {
@@ -73,16 +78,18 @@ public static partial class ExportCommand
         }
         catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            Console.Error.WriteLine($"{target} cannot be used: {e.Message}");
+            if (!quiet) Console.Error.WriteLine($"{target} cannot be used: {e.Message}");
             return 2;
         }
         if (File.Exists(path))
         {
-            Console.Error.WriteLine($"{path} already exists.");
+            if (!quiet) Console.Error.WriteLine($"{path} already exists.");
             return 1;
         }
 
         var export = Write(GameLibrary.Load(steam), path, ManifestLists.CacheFolder);
+        written = path;
+        if (quiet) return 0;
 
         Console.WriteLine($"COD Downgrader {AppState.Version}: this PC's Call of Duty build information");
         Console.WriteLine($"  {export.Apps.Count(a => a.ProductInfo is not null)} games with Steam's product info, {export.Apps.Count(a => a.Installed is not null)} installed");

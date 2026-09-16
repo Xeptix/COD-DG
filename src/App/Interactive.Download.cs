@@ -457,7 +457,7 @@ public sealed partial class Interactive
         }
     }
 
-    static ulong? FreeSpace(string path)
+    internal static ulong? FreeSpace(string path)
     {
         try
         {

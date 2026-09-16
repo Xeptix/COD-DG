@@ -419,7 +419,7 @@ public sealed partial class Interactive
             : "earlier build",
     };
 
-    static string Safe(string name)
+    internal static string Safe(string name)
     {
         var bad = Path.GetInvalidFileNameChars().Concat("<>:\"/\\|?*").ToHashSet();
         return new string(name.Replace(": ", " - ").Select(c => bad.Contains(c) ? '-' : c).ToArray()).Trim().TrimEnd('.');

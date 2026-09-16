@@ -283,7 +283,7 @@ public sealed partial class Interactive
     /// File lists come from Steam's manifest cache, the tool's own, or what DepotDownloader left in <paramref name="folder"/>; a
     /// depot without both is left out.
     /// </summary>
-    static List<PersonalizedCopy> PersonalizedInInstall(GameLibrary library, string installDir, IReadOnlyDictionary<uint, ulong> build,
+    internal static List<PersonalizedCopy> PersonalizedInInstall(GameLibrary library, string installDir, IReadOnlyDictionary<uint, ulong> build,
         IReadOnlyDictionary<uint, ulong> installed, string? folder)
     {
         IReadOnlyList<ManifestFile>? List(uint depot, ulong manifest) => library.Files(depot, manifest) ?? ManifestLists.Find(depot, manifest, folder);
@@ -313,7 +313,7 @@ public sealed partial class Interactive
     }
 
     /// <summary>The plan with Steam's originals of <paramref name="copies"/> written over the personalized copies in the game.</summary>
-    static PatchPlan WithOriginals(PatchPlan plan, IEnumerable<PersonalizedCopy> copies) =>
+    internal static PatchPlan WithOriginals(PatchPlan plan, IEnumerable<PersonalizedCopy> copies) =>
         new(plan.Writes.Concat(copies.Select(c => new PatchWrite(c.Name, c.Depot, c.Size, c.Sha, c.Sha, Personalized: true)))
                 .OrderBy(w => w.Name, PathRules.Comparer).ToList(),
             plan.Removes, plan.RemovesKnown);

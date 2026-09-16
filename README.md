@@ -247,19 +247,117 @@ Modern Warfare (2019), Black Ops Cold War, Vanguard, Modern Warfare II, Modern W
 and the Call of Duty app (Black Ops 7, Warzone) are listed but not downloadable. They need Activision's
 servers, and those only accept the current version.
 
-## Options
+## Command line
+
+Run it with nothing after it for the menus. Give it a command and it asks nothing, does that one thing
+and stops, which is what a script or another program uses.
 
 ```
-CODDowngrader --list                     everything it can see, changing nothing
-CODDowngrader --game 311210              open one game straight away
-CODDowngrader --steam "D:\Steam"         use this Steam folder
-CODDowngrader --depotdownloader <path>   use this DepotDownloader instead of fetching one
-CODDowngrader --no-color                 plain output
+CODDowngrader list                          Steam, the games, and every build known for them
+CODDowngrader builds 202990                 the builds of one game, and what to call each one
+CODDowngrader status                        what is installed, and any build written into it
+CODDowngrader download 311210 --build 2026-09-10 --to "X:\BO3 old"
+CODDowngrader ingame 202990 --build 2026-09-10 --only content
+CODDowngrader patch 202990 --build 2026-09-10 --from latest --to "X:\BO2 patch"
+CODDowngrader apply 202990 --from "X:\BO2 patch"
+CODDowngrader undo 202990
+CODDowngrader login
+CODDowngrader export "X:\exports"
 ```
 
-`--list` prints Steam's folder, its libraries, every installed Call of Duty with any build put into it,
-and every build known for it, with each manifest that differs from the install and where it comes from.
-It is the thing to paste when asking for help.
+`CODDowngrader help` lists them all.
+
+**Naming a game**: its Steam app ID, or part of its name, so `202990` and `"black ops ii - multi"` are the
+same game. **Naming a build**: `--build 2026-09-10` is the build before that day's update, the same way the
+menus name it; `--build latest` and `--build installed` are what Steam has now and what is in the game
+folder now. `CODDowngrader builds <game>` prints the name to use for every build it knows:
+
+```
+Call of Duty: Black Ops II - Multiplayer [202990]
+  latest           Latest on Steam (build 24784266), queued but not installed
+  installed        Installed now (build 515837)
+  2015-02-10       Before the update of 10 Feb 2015 · 1 depot differs
+```
+
+For a build the list does not have, name its depots instead: `--manifest 311211=9084453472036406216`,
+once per depot. Every depot not named keeps the build it is on. `CODDowngrader builds <game> --json` lists
+every manifest this PC knows of each depot, with when it was built, when Steam fetched it and when SteamDB
+first saw it, so a program can pick one the same way the menus do.
+
+| Option | What it does |
+|---|---|
+| `--to <folder>` | Where a download, a patch or an export goes |
+| `--from <build\|folder>` | `patch`: the build it starts from. `apply`: the folder to take |
+| `--only <what>` | `all` (the default), `content` (keep your exes and DLLs), or `binaries` |
+| `--files <name,name>` | Only these files of the build, instead of `--only` |
+| `--exe <steam\|installed>` | Which copy of an exe Steam personalizes for your account: `steam` puts Steam's original in, `installed` takes the copy from your installed game. Left out, a download keeps Steam's original and the installed game keeps its own copy |
+| `--backup <yes\|no>` | Keep the files a downgrade replaces, so `undo` can put them back. `yes` unless told otherwise |
+| `--again` | `ingame`: take the build already written in out first, then write this one in |
+| `--siblings` | `ingame`: take a game sharing the folder back to its build from the same time as well |
+| `--no-seed` | `download`: fetch everything instead of copying what the installed game already has |
+| `--delete` | `apply`: delete the folder once the game has what it needs from it |
+| `--yes` | Take the usual answer to anything that would be a question, including going ahead when the drive looks too full |
+| `--json` | One JSON object of what happened, instead of the human report |
+| `--login <auto\|saved\|window\|never>` | How to sign in, see below |
+| `--username <account>` | Sign in as this account instead of the last one used |
+| `--steam <folder>` | Use this Steam folder instead of looking for one |
+| `--depotdownloader <path>` | Use this DepotDownloader instead of fetching one |
+| `--no-color` | Plain output |
+
+A command works on the game it is given. Where two Call of Duty apps share a folder, as Black Ops II's
+Multiplayer and Zombies do, `ingame --siblings` takes each of them back to its own build from the same time,
+the way the menus offer to; without it the other app is left alone and the command says so.
+
+Steam puts its own files back when it verifies or updates a game. `ingame --again` writes the build in again
+over that, taking the one recorded in the folder out first. `CODDowngrader --list` and `--export` still do
+what they always did.
+
+### Signing in from a command
+
+Steam will not send a game's files to nobody, so anything that downloads needs an account. DepotDownloader
+signs in and keeps the sign-in, so this only happens once.
+
+**`CODDowngrader login`** signs in, in the window it runs in. When a command has to download and no account
+is signed in, it starts that window itself, waits for it, and carries on. A program that runs COD Downgrader
+therefore never has to handle a sign-in: the only thing the person sees is DepotDownloader's own prompt, and
+the password or Steam Guard code goes into DepotDownloader and nothing else. COD Downgrader has no
+`--password` option and refuses one.
+
+`--login` decides what a command may do about it: `auto` uses the account that is signed in and opens a
+window when there is none, `saved` never opens a window, `window` always opens one, and `never` fails
+instead of signing in.
+
+### What a program reads
+
+`--json` prints one object, whether the command worked or not:
+
+```json
+{
+  "tool": "COD Downgrader 1.0.3",
+  "command": "ingame",
+  "ok": true,
+  "exitCode": 0,
+  "game": { "app": 202990, "name": "Call of Duty: Black Ops II - Multiplayer" },
+  "build": { "key": "2015-02-10", "title": "Before the update of 10 Feb 2015", "part": "content only" },
+  "folder": "X:\Steam\steamapps\common\Call of Duty Black Ops II",
+  "written": 3,
+  "removed": 0,
+  "backup": "X:\Steam\COD Downgrader\Backups\Call of Duty Black Ops II 2026-09-16 011333"
+}
+```
+
+A command that did not work says why in the same shape: `"ok": false` and
+`"error": { "code": "signin", "message": "..." }`. The codes are words to switch on, such as `signin`,
+`locked`, `not-owned`, `no-build`, `already-applied` and `incomplete`.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Done |
+| 1 | Something went wrong |
+| 2 | The command line itself: an unknown command, a missing option, a build that names nothing |
+| 3 | A sign-in is needed |
+| 4 | A file the command has to write is in use, usually because the game is running |
+| 5 | The signed-in account does not own something the command needs |
 
 ## Files
 
@@ -314,6 +412,14 @@ It takes the manifest rows, each depot's name and owning app, and the depots a d
 out, such as low-violence content.
 
 ## Changelog
+
+### v1.0.3
+
+- Commands for everything, so a script or another program can drive it: `list`, `builds`, `status`,
+  `download`, `ingame`, `patch`, `apply`, `undo`, `login` and `export`. `CODDowngrader help` lists them.
+- `--json` gives a program one object per command, and every command ends with an exit code that says what
+  happened.
+- `CODDowngrader login` signs in on its own, and a command that needs an account opens that window itself.
 
 ### v1.0.2
 

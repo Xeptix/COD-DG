@@ -74,7 +74,7 @@ public sealed partial class Interactive
         a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out var v) && v == kv.Value);
 
     /// <summary>The build a game had just before an update at <paramref name="time"/>, allowing for the apps of one update arriving minutes apart.</summary>
-    static Build? LiveBefore(IReadOnlyList<Build> builds, DateTimeOffset time)
+    internal static Build? LiveBefore(IReadOnlyList<Build> builds, DateTimeOffset time)
     {
         Build? live = null;
         foreach (var build in builds)

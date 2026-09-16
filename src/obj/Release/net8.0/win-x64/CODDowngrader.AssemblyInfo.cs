@@ -15,11 +15,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright (c) 2026 Xeptix")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Download any build of a Call of Duty you own on Steam, into your installed game o" +
     "r into a folder of its own.")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.2.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.2")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.3.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.3")]
 [assembly: System.Reflection.AssemblyProductAttribute("COD Downgrader")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CODDowngrader")]
-[assembly: System.Reflection.AssemblyVersionAttribute("1.0.2.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.3.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/Xeptix/COD-DG")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CODDowngrader.Tests")]
 
