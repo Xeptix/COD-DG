@@ -71,7 +71,7 @@ public static class Runner
                 if (Login.NeedsSignIn(result) && attempt == 1 && run.Login is LoginMode.Auto or LoginMode.Window)
                 {
                     run.Line(result.AskedToSignIn ? "Steam wants the sign-in done again." : "Steam would not take that sign-in.");
-                    if (await Login.WindowAsync(run, login.Probe) is not { } account) return new RunOutcome(false, false, skipped, messages);
+                    if (await Login.SharedWindowAsync(run, login.Probe) is not { } account) return new RunOutcome(false, false, skipped, messages);
                     login.Account = account;
                     continue;
                 }

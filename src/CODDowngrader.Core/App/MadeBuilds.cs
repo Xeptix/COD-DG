@@ -59,6 +59,9 @@ internal partial class MadeJson : JsonSerializerContext
 /// </summary>
 public static class MadeBuilds
 {
+    /// <summary>The list is read, changed and written whole: jobs finishing together take turns.</summary>
+    static readonly object Gate = new();
+
     public static string DefaultPath => Path.Combine(AppState.Folder, "builds.json");
 
     /// <summary>
@@ -68,6 +71,11 @@ public static class MadeBuilds
     public static List<MadeBuild> Load(GameLibrary? library = null, string? path = null, string? appliedFolder = null, bool? writing = null)
     {
         path ??= DefaultPath;
+        lock (Gate) return LoadLocked(library, path, appliedFolder, writing);
+    }
+
+    static List<MadeBuild> LoadLocked(GameLibrary? library, string path, string? appliedFolder, bool? writing)
+    {
         var builds = Read(path);
 
         var added = false;
@@ -89,19 +97,25 @@ public static class MadeBuilds
     {
         if (!(writing ?? Remembered.Writing)) return;
         path ??= DefaultPath;
-        var builds = Read(path);
-        builds.Add(build);
-        Write(path, builds);
+        lock (Gate)
+        {
+            var builds = Read(path);
+            builds.Add(build);
+            Write(path, builds);
+        }
     }
 
     /// <summary>Takes a build off the list. Nothing it made is touched.</summary>
     public static void Remove(MadeBuild build, string? path = null)
     {
         path ??= DefaultPath;
-        var builds = Read(path);
-        builds.RemoveAll(b => b.Kind == build.Kind && b.AppId == build.AppId && PathRules.Comparer.Equals(b.Folder, build.Folder)
-                              && Math.Abs((b.Made - build.Made).TotalSeconds) < 1);
-        Write(path, builds);
+        lock (Gate)
+        {
+            var builds = Read(path);
+            builds.RemoveAll(b => b.Kind == build.Kind && b.AppId == build.AppId && PathRules.Comparer.Equals(b.Folder, build.Folder)
+                                  && Math.Abs((b.Made - build.Made).TotalSeconds) < 1);
+            Write(path, builds);
+        }
     }
 
     /// <summary>

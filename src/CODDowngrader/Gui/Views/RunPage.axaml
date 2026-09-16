@@ -11,7 +11,8 @@
         <Button Content="Share" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" Margin="0,0,10,0" />
         <Button Classes="accent" Content="Go ahead anyway" Command="{Binding OverrideCommand}" IsVisible="{Binding CanOverride}" Margin="0,0,10,0" />
         <Button Content="Try again" Command="{Binding RetryCommand}" IsVisible="{Binding Failed}" Margin="0,0,10,0" />
-        <Button Content="Back" Command="{Binding BackCommand}" IsVisible="{Binding Failed}" Margin="0,0,10,0" />
+        <Button Content="{Binding BackLabel}" Command="{Binding BackCommand}" IsVisible="{Binding !Succeeded}" Margin="0,0,10,0"
+                ToolTip.Tip="The job keeps going: the game in the list shows how far it has got." />
         <Button Content="{Binding OpenFolderLabel}" Command="{Binding OpenFolderCommand}" IsVisible="{Binding HasFolder}" Margin="0,0,10,0" />
         <Button Content="Open the logs" Command="{Binding LogsCommand}" IsVisible="{Binding Failed}" />
       </WrapPanel>

@@ -7,8 +7,10 @@ using CODDowngrader.Steam;
 namespace CODDowngrader.Gui.ViewModels;
 
 /// <summary>A game in the sidebar.</summary>
-public sealed class GameItem
+public sealed class GameItem : Observable
 {
+    RunPageViewModel? _job;
+
     public GameItem(GameEntry entry, GameLibrary library, Bitmap? icon = null)
     {
         Entry = entry;
@@ -43,6 +45,40 @@ public sealed class GameItem
         || Entry.AppId.ToString(System.Globalization.CultureInfo.InvariantCulture) == filter;
     public string? Badge { get; }
     public bool HasBadge => Badge is not null;
+
+    /// <summary>The job this game has, running or ended and not yet looked at.</summary>
+    public RunPageViewModel? Job
+    {
+        get => _job;
+        set
+        {
+            _job = value;
+            Refresh();
+        }
+    }
+
+    public bool HasJob => _job is not null;
+    public bool JobRunning => _job?.Running == true;
+    public bool JobIndeterminate => _job?.Indeterminate != false;
+    public double JobFraction => _job?.Fraction ?? 0;
+    public bool JobDone => _job?.Succeeded == true;
+    public bool JobFailed => _job?.Failed == true;
+
+    public string? JobText => _job switch
+    {
+        null => null,
+        { Running: true, Indeterminate: true } running => running.Stage,
+        { Running: true } running => $"{running.Stage} · {Math.Round(running.Fraction * 100):0}%",
+        { Succeeded: true } => "Done",
+        var ended => ended.Stage,
+    };
+
+    /// <summary>The job has moved on: what the list shows follows it.</summary>
+    public void Refresh()
+    {
+        foreach (var name in new[] { nameof(Job), nameof(HasJob), nameof(JobRunning), nameof(JobIndeterminate), nameof(JobFraction), nameof(JobDone), nameof(JobFailed), nameof(JobText) })
+            Raise(name);
+    }
 }
 
 /// <summary>The window: the games down the side, and the page for whatever is chosen.</summary>
@@ -52,6 +88,9 @@ public sealed class MainViewModel : Observable
     readonly List<GameItem> _allInstalled = new();
     readonly List<GameItem> _allOthers = new();
     readonly Dictionary<uint, Bitmap> _icons = new();
+    readonly Dictionary<uint, RunPageViewModel> _jobs = new();
+    GamePageViewModel? _gamePage;
+    bool _askToClose;
     object? _page;
     GameItem? _open;
     string _filter = "";
@@ -66,6 +105,8 @@ public sealed class MainViewModel : Observable
         Platform = platform;
         SettingsCommand = new Command(() => Show(new SettingsPageViewModel(this)));
         OpenBuildCommand = new Command(() => Show(new OpenBuildPageViewModel(this)), () => Library is not null);
+        KeepGoingCommand = new Command(() => AskToClose = false);
+        StopAndCloseCommand = new Command(StopAndCloseAsync);
         BuildsCommand = new Command(() => Show(new BuildsPageViewModel(this)), () => Library is not null);
     }
 
@@ -110,6 +151,101 @@ public sealed class MainViewModel : Observable
 
     public Command SettingsCommand { get; }
     public Command OpenBuildCommand { get; }
+    public Command KeepGoingCommand { get; }
+    public Command StopAndCloseCommand { get; }
+
+    /// <summary>The window is asked to close while jobs run: it asks first.</summary>
+    public bool AskToClose { get => _askToClose; private set { Set(ref _askToClose, value); Raise(nameof(RunningText)); } }
+
+    public int RunningJobs => _jobs.Values.Count(j => j.Running);
+
+    public string RunningText
+    {
+        get
+        {
+            var names = _jobs.Values.Where(j => j.Running).Select(j => j.Game.Name).ToList();
+            return names.Count == 1
+                ? $"{names[0]} is still going. Closing stops it; starting the same download again later carries on from where it stopped."
+                : $"{names.Count} jobs are still going: {string.Join(", ", names)}. Closing stops them; starting the same download again later carries on from where it stopped.";
+        }
+    }
+
+    /// <summary>Raised once every job has stopped after Stop them and close.</summary>
+    public event EventHandler? CloseReady;
+
+    /// <summary>
+    /// Starts a job for a game, one per game: a game with one running shows it instead, and one that has ended makes way for the
+    /// new one. A job that writes into a game's folder waits for any other job writing into that folder. Null once the job's
+    /// page shows; otherwise why it did not start.
+    /// </summary>
+    public string? StartJob(GameEntry game, string kind, Jobs.JobSettings settings, string title)
+    {
+        if (_jobs.TryGetValue(game.AppId, out var existing))
+        {
+            if (existing.Running)
+            {
+                ShowJob(existing);
+                return null;
+            }
+            EndJob(existing);
+        }
+        if (kind is "ingame" or "apply" or "undo" && game.Installed is { } app
+            && _jobs.Values.FirstOrDefault(j => j.Running && j.WritesIntoGame && j.Game.Installed is { } other && PathRules.Same(other.InstallDir, app.InstallDir)) is { } busy)
+            return $"{busy.Game.Name} is being changed in the same folder right now. Start this once that has finished.";
+
+        var run = new RunPageViewModel(this, game, kind, settings, title);
+        _jobs[game.AppId] = run;
+        run.PropertyChanged += (_, _) => JobMoved(game.AppId);
+        JobMoved(game.AppId);
+        ShowJob(run);
+        return null;
+    }
+
+    /// <summary>The job a game has, running or ended and not yet looked at.</summary>
+    public RunPageViewModel? JobOf(uint appId) => _jobs.GetValueOrDefault(appId);
+
+    /// <summary>An ended job's page has been left: the game goes back to showing nothing.</summary>
+    public void EndJob(RunPageViewModel run)
+    {
+        if (!_jobs.TryGetValue(run.Game.AppId, out var kept) || !ReferenceEquals(kept, run) || run.Running) return;
+        _jobs.Remove(run.Game.AppId);
+        JobMoved(run.Game.AppId);
+    }
+
+    /// <summary>A job's page over its game's page, in place of the choice page it was started from.</summary>
+    void ShowJob(RunPageViewModel run)
+    {
+        if (_page is ActionPageViewModel) Page = run;
+        else Show(run);
+    }
+
+    void JobMoved(uint appId)
+    {
+        var run = _jobs.GetValueOrDefault(appId);
+        foreach (var item in _allInstalled.Concat(_allOthers).Where(i => i.Entry.AppId == appId))
+        {
+            if (ReferenceEquals(item.Job, run)) item.Refresh();
+            else item.Job = run;
+        }
+        if (_gamePage?.Game.AppId == appId) _gamePage.JobChanged();
+        Raise(nameof(RunningJobs));
+    }
+
+    /// <summary>The window's close button: straight away with nothing running, and otherwise after asking.</summary>
+    public bool CanCloseNow()
+    {
+        if (RunningJobs == 0) return true;
+        AskToClose = true;
+        return false;
+    }
+
+    async Task StopAndCloseAsync()
+    {
+        var running = _jobs.Values.Where(j => j.Running).ToList();
+        foreach (var run in running) run.Stop();
+        await Task.WhenAny(Task.WhenAll(running.Select(r => r.Completion)), Task.Delay(TimeSpan.FromSeconds(20)));
+        CloseReady?.Invoke(this, EventArgs.Empty);
+    }
     public Command BuildsCommand { get; }
 
     public object? Page
@@ -202,6 +338,8 @@ public sealed class MainViewModel : Observable
             _open = null;
             _back.Clear();
             ApplyFilter();
+            // The games read again: each keeps the job it had.
+            foreach (var appId in _jobs.Keys.ToList()) JobMoved(appId);
             var chosen = _allInstalled.Concat(_allOthers).FirstOrDefault(i => i.Entry.AppId == keep)
                          ?? Installed.FirstOrDefault() ?? _allInstalled.FirstOrDefault();
             if (chosen is null)
@@ -233,9 +371,15 @@ public sealed class MainViewModel : Observable
         _back.Clear();
         _open = item;
         var page = new GamePageViewModel(this, Library, item.Entry);
+        _gamePage = page;
         Page = page;
         page.Loaded = page.LoadAsync();
+        // Back on a game with a job: its page again, over the game's.
+        if (_showJobs && _jobs.TryGetValue(item.Entry.AppId, out var run)) Show(run);
     }
+
+    /// <summary>Whether opening a game shows its job; off while a page opens a game to work on it, as Open a build does.</summary>
+    bool _showJobs = true;
 
     /// <summary>Opens a game's page as picking it in the sidebar does, and waits until its builds are read. Null when it is not listed.</summary>
     public async Task<GamePageViewModel?> OpenGameAsync(uint appId)
@@ -247,8 +391,16 @@ public sealed class MainViewModel : Observable
         _selectedInstalled = null;
         _selectedOther = null;
         _open = null;
-        if (item.Entry.Installed is not null) SelectedInstalled = item;
-        else SelectedOther = item;
+        _showJobs = false;
+        try
+        {
+            if (item.Entry.Installed is not null) SelectedInstalled = item;
+            else SelectedOther = item;
+        }
+        finally
+        {
+            _showJobs = true;
+        }
         Raise(nameof(SelectedInstalled));
         Raise(nameof(SelectedOther));
         if (Page is not GamePageViewModel page) return null;

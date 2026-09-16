@@ -66,6 +66,7 @@ public sealed class GamePageViewModel : Observable
         FindAtCommand = new Command(FindAtAsync, () => _atDate is not null && _history is not null);
         ManualCommand = new Command(() => _main.Show(HelperPageViewModel.ForManifests(_main, this, _library, Game)), () => _history is not null);
         ShareCommand = new Command(ShareSelected, () => _selected is not null && _history is not null);
+        ShowJobCommand = new Command(() => { if (Job is { } run) _main.Show(run); }, () => HasJob);
         ShareAppliedCommand = new Command(() => { if (Applied is not null) _main.Show(new SharePageViewModel(_main, SharedBuild.Of(Applied, Game))); }, () => Applied is not null);
     }
 
@@ -74,6 +75,17 @@ public sealed class GamePageViewModel : Observable
 
     public GameEntry Game { get; }
     public string Name => Game.Name;
+
+    /// <summary>The job this game has, running or ended: shown above everything, with a way back to its page.</summary>
+    public RunPageViewModel? Job => _main.JobOf(Game.AppId);
+    public bool HasJob => Job is not null;
+
+    public void JobChanged()
+    {
+        Raise(nameof(Job));
+        Raise(nameof(HasJob));
+        ShowJobCommand.Changed();
+    }
     public Avalonia.Media.Imaging.Bitmap? Icon => _main.IconOf(Game.AppId);
     public bool HasIcon => Icon is not null;
     public bool IsInstalled => Game.Installed is not null;
@@ -190,6 +202,7 @@ public sealed class GamePageViewModel : Observable
     public Command FindAtCommand { get; }
     public Command ManualCommand { get; }
     public Command ShareCommand { get; }
+    public Command ShowJobCommand { get; }
     public Command ShareAppliedCommand { get; }
 
     /// <summary>The sidebar's Open a build, offered where the list has no build that fits.</summary>

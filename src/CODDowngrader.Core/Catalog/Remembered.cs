@@ -74,10 +74,15 @@ public sealed class Remembered
     }
 
     /// <summary>Adds the rows not already remembered, and writes them to the file unless this run does not remember.</summary>
+    /// <summary>Jobs running together each append to the same file: one at a time.</summary>
+    static readonly object FileGate = new();
+
     public void Learn(IEnumerable<RememberedManifest> rows)
     {
-        var added = rows.Where(r => r.Depot != 0 && r.Manifest != 0 && Keep(r)).ToList();
+        List<RememberedManifest> added;
+        lock (_rows) added = rows.Where(r => r.Depot != 0 && r.Manifest != 0 && Keep(r)).ToList();
         if (added.Count == 0 || !_writing) return;
+        lock (FileGate)
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);

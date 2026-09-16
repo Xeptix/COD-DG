@@ -21,6 +21,15 @@ public static class Login
 {
     public static string? SavedAccount() => AppState.LoadSettings().SteamAccount;
 
+    /// <summary>One DepotDownloader install at a time: jobs started together wait for the first to fetch it.</summary>
+    static readonly SemaphoreSlim ToolGate = new(1, 1);
+
+    /// <summary>One sign-in window at a time.</summary>
+    static readonly SemaphoreSlim WindowGate = new(1, 1);
+
+    /// <summary>When the last sign-in window signed in, and as whom.</summary>
+    static (DateTimeOffset At, string Account)? _lastWindow;
+
     /// <summary>DepotDownloader, fetched if this PC does not have it yet. Null once the failure has been reported.</summary>
     public static async Task<string?> ToolAsync(Job run)
     {
@@ -32,6 +41,44 @@ public static class Login
         }
         if (DepotDownloaderTool.FindInstalled(AppState.Folder) is { } ready) return ready;
 
+        await ToolGate.WaitAsync(run.Cancel);
+        try
+        {
+            return DepotDownloaderTool.FindInstalled(AppState.Folder) ?? await FetchToolAsync(run);
+        }
+        finally
+        {
+            ToolGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// A sign-in window for a job, one at a time. A job that asked for one while another was open takes that window's
+    /// sign-in instead of opening a second, so jobs started together are signed in once.
+    /// </summary>
+    public static async Task<string?> SharedWindowAsync(Job run, LoginProbe probe)
+    {
+        var asked = DateTimeOffset.UtcNow;
+        await WindowGate.WaitAsync(run.Cancel);
+        try
+        {
+            if (_lastWindow is { } last && last.At >= asked)
+            {
+                run.Line($"Signed in as {last.Account}.");
+                return last.Account;
+            }
+            var account = await WindowAsync(run, probe);
+            if (account is not null) _lastWindow = (DateTimeOffset.UtcNow, account);
+            return account;
+        }
+        finally
+        {
+            WindowGate.Release();
+        }
+    }
+
+    static async Task<string?> FetchToolAsync(Job run)
+    {
         var release = DepotDownloaderTool.ReleaseForThisMachine();
         if (release is null)
         {
@@ -74,7 +121,7 @@ public static class Login
                 return (true, saved);
 
             case LoginMode.Window:
-                var opened = await WindowAsync(run, probe);
+                var opened = await SharedWindowAsync(run, probe);
                 return (opened is not null, opened);
 
             default:
@@ -86,7 +133,7 @@ public static class Login
                     run.Line("No Steam account is signed in yet: DepotDownloader shows a QR code to scan with the Steam mobile app.");
                     return (true, null);
                 }
-                var account = await WindowAsync(run, probe);
+                var account = await SharedWindowAsync(run, probe);
                 return (account is not null, account);
         }
     }

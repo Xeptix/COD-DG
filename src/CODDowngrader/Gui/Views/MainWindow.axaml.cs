@@ -7,9 +7,27 @@ namespace CODDowngrader.Gui.Views;
 
 public sealed partial class MainWindow : Window
 {
+    bool _closing;
+
     public MainWindow()
     {
         InitializeComponent();
+
+        // Closing with jobs running asks first; once they are stopped, the window closes for real.
+        Closing += (_, e) =>
+        {
+            if (_closing || DataContext is not MainViewModel model || model.CanCloseNow()) return;
+            e.Cancel = true;
+        };
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is MainViewModel model)
+                model.CloseReady += (_, _) =>
+                {
+                    _closing = true;
+                    Close();
+                };
+        };
         KeyDown += (_, e) =>
         {
             if (e.Handled) return;

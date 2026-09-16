@@ -45,6 +45,11 @@
                       <Border Classes="badge" IsVisible="{Binding HasBadge}" HorizontalAlignment="Left">
                         <TextBlock Text="{Binding Badge}" Classes="small" />
                       </Border>
+                      <StackPanel IsVisible="{Binding HasJob}" Spacing="3" Margin="0,5,0,0">
+                        <ProgressBar Minimum="0" Maximum="1" Value="{Binding JobFraction}" IsIndeterminate="{Binding JobIndeterminate}"
+                                     IsVisible="{Binding JobRunning}" Height="4" MinHeight="4" />
+                        <TextBlock Text="{Binding JobText}" Classes="small" Classes.ok="{Binding JobDone}" Classes.error="{Binding JobFailed}" TextWrapping="Wrap" />
+                      </StackPanel>
                     </StackPanel>
                   </Grid>
                 </DataTemplate>
@@ -58,6 +63,11 @@
                   <StackPanel Spacing="1" Margin="0,2">
                     <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" Classes="muted small" TextWrapping="Wrap" />
+                    <StackPanel IsVisible="{Binding HasJob}" Spacing="3" Margin="0,5,0,0">
+                      <ProgressBar Minimum="0" Maximum="1" Value="{Binding JobFraction}" IsIndeterminate="{Binding JobIndeterminate}"
+                                   IsVisible="{Binding JobRunning}" Height="4" MinHeight="4" />
+                      <TextBlock Text="{Binding JobText}" Classes="small" Classes.ok="{Binding JobDone}" Classes.error="{Binding JobFailed}" TextWrapping="Wrap" />
+                    </StackPanel>
                   </StackPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>
@@ -70,6 +80,18 @@
     <Border Grid.Column="1" Classes="page">
       <Grid>
         <ContentControl Content="{Binding Page}" />
+        <Border IsVisible="{Binding AskToClose}" Background="#99000000">
+          <Border Classes="card" MaxWidth="520" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
+            <StackPanel Spacing="12">
+              <TextBlock Text="Still downloading" Classes="h2" />
+              <TextBlock Text="{Binding RunningText}" TextWrapping="Wrap" />
+              <WrapPanel>
+                <Button Classes="accent" Content="Keep going" Command="{Binding KeepGoingCommand}" Margin="0,0,10,0" />
+                <Button Content="Stop and close" Command="{Binding StopAndCloseCommand}" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+        </Border>
         <StackPanel IsVisible="{Binding Loading}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
           <ProgressBar IsIndeterminate="True" Width="220" />
           <TextBlock Text="Reading Steam" HorizontalAlignment="Center" Classes="muted" />

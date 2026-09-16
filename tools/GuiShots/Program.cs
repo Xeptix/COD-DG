@@ -111,6 +111,41 @@ run.ShowLog = true;
 Shot("5-run-failed");
 model.Back();
 
+// Jobs by game: one ended on Black Ops III, one part way on Black Ops II Multiplayer, a second change to that folder refused,
+// switching games and back, and closing while one runs.
+var bo3 = model.Library!.Entries.First(e => e.AppId == 311210);
+Console.WriteLine($"  jobs: Black Ops III undo {model.StartJob(bo3, "undo", new JobSettings(), "Undo the downgrade") ?? "started"}");
+var endedJob = model.JobOf(bo3.AppId)!;
+Pump(() => !endedJob.Running);
+Console.WriteLine($"  jobs: Black Ops II MP {model.StartJob(game.Game, "undo", new JobSettings(), "Putting Before the update of 10 Feb 2015 into Call of Duty: Black Ops II - Multiplayer") ?? "started"}");
+var goingJob = model.JobOf(game.Game.AppId)!;
+Pump(() => !goingJob.Running);
+typeof(RunPageViewModel).GetProperty("Running")!.SetValue(goingJob, true);
+typeof(RunPageViewModel).GetProperty("Failed")!.SetValue(goingJob, false);
+typeof(RunPageViewModel).GetProperty("Message")!.SetValue(goingJob, null);
+goingJob.Progress(new JobProgress("Downloading", "8.1 MB of 13 MB · depot 202991, 1 of 1: t6mp.exe", 0.62));
+var zombies = model.Library!.Entries.First(e => e.AppId == 212910);
+Console.WriteLine($"  jobs: Zombies in the same folder: {model.StartJob(zombies, "ingame", new JobSettings(), "Putting a build into Zombies") ?? "STARTED"}");
+Console.WriteLine($"  jobs: running {model.RunningJobs}");
+model.SelectedInstalled = model.Installed.First(i => i.Entry.AppId == bo3.AppId);
+Console.WriteLine($"  jobs: opening Black Ops III shows {(ReferenceEquals(model.Page, endedJob) ? "its ended job" : model.Page?.GetType().Name)}");
+Shot("17-jobs-sidebar");
+endedJob.BackCommand.Execute(null);
+Console.WriteLine($"  jobs: after Back, Black Ops III has {(model.JobOf(bo3.AppId) is null ? "no job" : "A JOB STILL")}, page {model.Page?.GetType().Name}");
+model.SelectedInstalled = model.Installed.First(i => i.Entry.AppId == game.Game.AppId);
+Console.WriteLine($"  jobs: opening Black Ops II MP shows {(ReferenceEquals(model.Page, goingJob) ? "its running job" : model.Page?.GetType().Name)}");
+Shot("17b-running-job-page");
+goingJob.BackCommand.Execute(null);
+Console.WriteLine($"  jobs: Back to the game keeps the job: {model.JobOf(game.Game.AppId) is not null && goingJob.Running}, page {model.Page?.GetType().Name}");
+Shot("17c-game-with-job");
+Console.WriteLine($"  jobs: close now? {model.CanCloseNow()}");
+Shot("17d-close-while-running");
+model.KeepGoingCommand.Execute(null);
+typeof(RunPageViewModel).GetProperty("Running")!.SetValue(goingJob, false);
+typeof(RunPageViewModel).GetProperty("Succeeded")!.SetValue(goingJob, true);
+goingJob.BackCommand.Execute(null);
+game = (GamePageViewModel)model.Page!;
+
 // With "run" as the third argument: a real patch job into a folder under the shots, to see progress come through.
 if (args.Length > 2 && args[2] == "run")
 {

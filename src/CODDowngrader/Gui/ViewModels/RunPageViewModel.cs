@@ -41,23 +41,44 @@ public sealed class RunPageViewModel : Observable, IHasBack, IJobView
         Title = title;
 
         CancelCommand = new Command(() => _cancel?.Cancel(), () => _running);
-        DoneCommand = new Command(() => _main.ReloadAsync(_game.AppId), () => !_running);
-        RetryCommand = new Command(() => StartAsync(), () => !_running && _failed);
+        DoneCommand = new Command(() =>
+        {
+            _main.EndJob(this);
+            return _main.ReloadAsync(_game.AppId);
+        }, () => !_running);
+        RetryCommand = new Command(() => Completion = StartAsync(), () => !_running && _failed);
         OverrideCommand = new Command(() =>
         {
             _settings = _settings with { Yes = true };
-            return StartAsync();
+            return Completion = StartAsync();
         }, () => !_running && CanOverride);
-        BackCommand = new Command(() => _main.Back(), () => !_running && _failed);
+        // A job keeps running when its page is left; one that has ended is done with once its page is.
+        BackCommand = new Command(() =>
+        {
+            if (!_running) _main.EndJob(this);
+            _main.Back();
+        });
         LogsCommand = new Command(() => _main.Platform.Open(AppState.LogsFolder));
         OpenFolderCommand = new Command(() => { if (_folder is { } folder) _main.Platform.Open(folder); }, () => HasFolder);
         ShareCommand = new Command(() => { if (_shared is { } shared) _main.Show(new SharePageViewModel(_main, shared)); }, () => CanShare);
         ToggleLogCommand = new Command(() => ShowLog = !ShowLog);
 
-        _ = StartAsync();
+        Completion = StartAsync();
     }
 
     public string Title { get; }
+    public GameEntry Game => _game;
+    public string Kind => _kind;
+
+    /// <summary>The run under way, or the last one: what closing the window waits for once it has stopped jobs.</summary>
+    public Task Completion { get; private set; }
+
+    /// <summary>Whether this job writes into the game's own folder, so no other job may change that folder at the same time.</summary>
+    public bool WritesIntoGame => _kind is "ingame" or "apply" or "undo";
+
+    public string BackLabel => _running ? "Back to the game" : "Back";
+
+    public void Stop() => _cancel?.Cancel();
     public ObservableCollection<string> LogLines { get; } = new();
 
     public Command CancelCommand { get; }
@@ -93,6 +114,7 @@ public sealed class RunPageViewModel : Observable, IHasBack, IJobView
         private set
         {
             Set(ref _running, value);
+            Raise(nameof(BackLabel));
             foreach (var command in new[] { CancelCommand, DoneCommand, RetryCommand, OverrideCommand, BackCommand }) command.Changed();
         }
     }

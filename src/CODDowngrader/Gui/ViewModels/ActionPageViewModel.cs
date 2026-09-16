@@ -620,7 +620,7 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
             "undo" => $"Undoing {_game.Applied?.Title}",
             _ => $"Applying {Folder}",
         };
-        _main.Show(new RunPageViewModel(_main, _game.Game, Kind, settings, title));
+        if (_main.StartJob(_game.Game, Kind, settings, title) is { } refused) Error = refused;
     }
 
     public void Progress(JobProgress progress) => Stage = progress.Detail is { } detail ? $"{progress.Stage}: {detail}" : progress.Stage;

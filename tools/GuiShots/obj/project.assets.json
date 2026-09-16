@@ -530,14 +530,14 @@
           "lib/net8.0/Tmds.DBus.Protocol.dll": {}
         }
       },
-      "CODDowngrader/1.1.0": {
+      "CODDowngrader/1.1.1": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
           "Avalonia": "11.2.3",
           "Avalonia.Desktop": "11.2.3",
           "Avalonia.Themes.Fluent": "11.2.3",
-          "CODDowngrader.Core": "1.1.0"
+          "CODDowngrader.Core": "1.1.1"
         },
         "compile": {
           "bin/placeholder/CODDowngrader.dll": {}
@@ -546,7 +546,7 @@
           "bin/placeholder/CODDowngrader.dll": {}
         }
       },
-      "CODDowngrader.Core/1.1.0": {
+      "CODDowngrader.Core/1.1.1": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
@@ -1378,12 +1378,12 @@
         "tmds.dbus.protocol.nuspec"
       ]
     },
-    "CODDowngrader/1.1.0": {
+    "CODDowngrader/1.1.1": {
       "type": "project",
       "path": "../../src/CODDowngrader/CODDowngrader.csproj",
       "msbuildProject": "../../src/CODDowngrader/CODDowngrader.csproj"
     },
-    "CODDowngrader.Core/1.1.0": {
+    "CODDowngrader.Core/1.1.1": {
       "type": "project",
       "path": "../../src/CODDowngrader.Core/CODDowngrader.Core.csproj",
       "msbuildProject": "../../src/CODDowngrader.Core/CODDowngrader.Core.csproj"
@@ -1393,7 +1393,7 @@
     "net8.0": [
       "Avalonia.Headless >= 11.2.3",
       "Avalonia.Skia >= 11.2.3",
-      "CODDowngrader >= 1.1.0"
+      "CODDowngrader >= 1.1.1"
     ]
   },
   "packageFolders": {
@@ -1401,7 +1401,7 @@
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "restore": {
       "projectUniqueName": "D:\\Projects\\COD Downgrader\\tools\\GuiShots\\GuiShots.csproj",
       "projectName": "GuiShots",

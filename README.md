@@ -74,6 +74,11 @@ Steam has put its own files back. Putting a build into the game, applying a fold
 page that shows what the game has now, what it will have after, and each depot that changes, before anything
 does.
 
+A download or a change to a game carries on while you look at other games, and several games can have one going
+at once. The game in the list shows how far its job has got, and choosing it again shows the job; closing the window
+while one is going asks first. Two games that share a folder, such as Black Ops II's Multiplayer and Zombies, are
+changed one at a time.
+
 **Your builds**, below the games, lists every downgrade, download and patch folder made on this PC, newest
 first, with where each one is and whether it is still there, and **Share** on each. A download or a patch folder
 that is still there has **Put it into the game**, and the downgrade in a game now has **Undo it**, each with
@@ -541,6 +546,12 @@ It takes the manifest rows, each depot's name and owning app, and the depots a d
 out, such as low-violence content.
 
 ## Changelog
+
+### v1.1.2
+
+- Downloads and downgrades keep going while you look at other games, several games can have one going at once, and the
+  list of games shows each one's progress. Choosing a game shows its job again, and closing the window while one is
+  going asks first.
 
 ### v1.1.1
 

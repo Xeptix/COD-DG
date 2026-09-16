@@ -32,6 +32,21 @@
           <Button Content="Open the game folder" Command="{Binding OpenFolderCommand}" IsVisible="{Binding IsInstalled}" HorizontalAlignment="Left" Margin="0,6,0,0" />
         </StackPanel>
 
+        <Border Classes="card" IsVisible="{Binding HasJob}">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="6" Margin="0,0,16,0">
+              <TextBlock Text="{Binding Job.Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <ProgressBar Minimum="0" Maximum="1" Value="{Binding Job.Fraction}" IsIndeterminate="{Binding Job.Indeterminate}" IsVisible="{Binding Job.Running}" Height="6" />
+              <TextBlock Classes="muted small" TextWrapping="Wrap">
+                <Run Text="{Binding Job.Stage}" />
+                <Run Text="  " />
+                <Run Text="{Binding Job.Detail}" />
+              </TextBlock>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="accent" Content="Show it" Command="{Binding ShowJobCommand}" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+
         <Border Classes="card" IsVisible="{Binding !Downgradable}">
           <TextBlock Text="{Binding NotDowngradable}" TextWrapping="Wrap" />
         </Border>
