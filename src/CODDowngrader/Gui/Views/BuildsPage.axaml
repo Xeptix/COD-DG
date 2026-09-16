@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.BuildsPage"
+             x:DataType="vm:BuildsPageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar">
+      <WrapPanel Margin="28,14,28,14">
+        <Button Content="Back" Command="{Binding BackCommand}" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="16" MaxWidth="920" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Your builds" Classes="h1" TextWrapping="Wrap" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Every downgrade, download and patch folder made on this PC, newest first. Share one with someone who owns the game, or find where it went." />
+        </StackPanel>
+
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding Loading}" Width="220" HorizontalAlignment="Left" />
+
+        <Border Classes="card" IsVisible="{Binding IsEmpty}">
+          <TextBlock TextWrapping="Wrap"
+                     Text="Nothing yet. Each build you put into a game, download into a folder of its own, or save as a patch folder shows here once it has finished." />
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Builds}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MadeBuildItem">
+              <Border Classes="card" Margin="0,0,0,12">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Panel Width="36" Height="36" Margin="0,2,14,0" VerticalAlignment="Top">
+                    <Image Source="{Binding Icon}" IsVisible="{Binding HasIcon}" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <Border IsVisible="{Binding !HasIcon}" CornerRadius="7" Background="{DynamicResource StrokeBrush}" />
+                  </Panel>
+                  <StackPanel Grid.Column="1" Spacing="2" Margin="0,0,16,0">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Game}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding What}" Classes="muted small" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Folder}" Classes="muted small" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding State}" Classes="small" TextWrapping="Wrap" Margin="0,2,0,0" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+                    <Button Classes="accent" Content="Put it into the game" Command="{Binding ApplyCommand}" IsVisible="{Binding CanApply}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Shows what the game has now and what goes in, before anything changes." />
+                    <Button Classes="accent" Content="Undo it" Command="{Binding UndoCommand}" IsVisible="{Binding CanUndo}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Shows what comes back, from the backup or from Steam, before anything changes." />
+                    <Button Content="Share" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Content="{Binding OpenFolderLabel}" Command="{Binding OpenFolderCommand}" IsVisible="{Binding CanOpenFolder}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                    <Button Content="Remove from the list" Command="{Binding RemoveCommand}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Only the list forgets it: nothing in the game or the folder changes." />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

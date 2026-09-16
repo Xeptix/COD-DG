@@ -7,7 +7,8 @@ By [Xep](https://github.com/Xeptix).
 When a Call of Duty update breaks a community client or a mod, the build from before the update is
 still on Steam's servers. COD Downgrader finds out which build that was, and either puts it into your
 installed game, downloading only the files that differ, or downloads the whole game at that build into a
-folder of its own, which Steam never touches and never updates.
+folder of its own, which Steam never touches and never updates. It runs as a window, as menus in a
+console, or one command at a time for scripts and other programs.
 
 > **For Steam owners only.** COD Downgrader downloads through your own Steam account, and Steam only
 > sends a game's files to an account that owns the game. Every Call of Duty you download with it has
@@ -17,7 +18,8 @@ folder of its own, which Steam never touches and never updates.
 ## Download
 
 Get `COD-DG-v<version>-win-x64.zip` from the [latest release](https://github.com/Xeptix/COD-DG/releases/latest),
-extract it anywhere and run `CODDowngrader.exe`.
+extract it anywhere and run `CODDowngrader.exe`. Keep `CODDowngrader.com` beside it: it is what runs when you
+type `CODDowngrader` in a terminal.
 
 You need:
 
@@ -34,9 +36,9 @@ in `SHA256SUMS`.
 
 ## Using it
 
-1. **Pick a game.** Installed Call of Duty games come first, each with how many older builds are
-   known. Every other Call of Duty on Steam is under *Other Call of Duty games*; those have to be
-   owned by the account too.
+1. **Pick a game** on the left. Installed Call of Duty games come first; every other Call of Duty on
+   Steam is under *Not installed*, and those have to be owned by the account too. **Find a game** above the
+   list narrows it by name or app ID.
 2. **Pick a version.**
    - **Before the update of *date*** is a build Steam replaced, from the built-in list or put back
      together from what Steam left on this PC.
@@ -45,18 +47,96 @@ in `SHA256SUMS`.
    - **Latest on Steam** is the current build, shown when it is newer than what is installed.
    - **Newest build on the built-in list** stands in for it when Steam on this PC has no product info
      for the game.
-   - **Enter manifest IDs from SteamDB** gets any other build.
-3. **Choose how.**
-   - **Put it into the installed game** downloads only the files that differ from what is installed,
-     and swaps them in. See [Into the installed game](#into-the-installed-game).
-   - **Download the whole build into a folder of its own** leaves the installed game as it is. The
-     first download defaults to `COD Downgrader` inside the game's Steam library, beside `steamapps`;
-     later ones default to wherever the last one went. Anywhere outside `steamapps` works.
-   - **Save a patch folder** downloads only the files that differ from another build, the latest on
-     Steam unless you pick one, to put into the game later. See [Patch folders](#patch-folders).
-4. For a whole build of an installed game, **start from your installed copy**. See below.
-5. **Sign in** to Steam with the account that owns the game.
-6. DepotDownloader downloads the build, or only the files that differ.
+   - **Go back to a date**: pick a day and **Find that build**. See
+     [Going back to a date](#going-back-to-a-date).
+   - **Enter manifest IDs** gets any other build from SteamDB, and **Open a build** takes one someone
+     sent you. Both are under *Not in the list?*, with going back to a date.
+3. **Choose what to do with it.**
+   - **Put it into the game** downloads only the files that differ from what is installed, and swaps
+     them in. See [Into the installed game](#into-the-installed-game).
+   - **Download into a folder of its own** leaves the installed game as it is. The folder starts as
+     `COD Downgrader` inside the game's Steam library, beside `steamapps`; anywhere outside `steamapps`
+     works. See [What ends up in the folder](#what-ends-up-in-the-folder).
+   - **Save a patch folder** downloads only the files that differ from another build, to put into the
+     game later. See [Patch folders](#patch-folders).
+4. COD Downgrader works out **what changes** and shows it before anything happens: how many files, how
+   big, and anything worth knowing, such as files a mod has replaced. Choose which files go in, and the
+   rest of the options, then press the button that says what happens: **Put it into the game**,
+   **Download** or **Save the patch folder**.
+5. **Sign in** to Steam with the account that owns the game, the first time. See
+   [Signing in](#signing-in).
+6. When it has finished, **Open the folder** shows where the files went: the download or patch folder, or
+   the game's own folder, and **Share** hands the build to someone else. See
+   [Sharing a build](#sharing-a-build).
+
+The game's page shows a build written into it, with **Undo the downgrade**, and **Downgrade again** once
+Steam has put its own files back. Putting a build into the game, applying a folder and undoing all start on a
+page that shows what the game has now, what it will have after, and each depot that changes, before anything
+does.
+
+**Your builds**, below the games, lists every downgrade, download and patch folder made on this PC, newest
+first, with where each one is and whether it is still there, and **Share** on each. A download or a patch folder
+that is still there has **Put it into the game**, and the downgrade in a game now has **Undo it**, each with
+that same page first. **Open a build** is for
+builds that are not in a game's list: a shared build someone sent you, and a patch folder or a downloaded build
+you already have. Choose the folder and it says which game and build it holds, with **Put it into the game**
+and **Share it**. Esc, or the mouse's back button, goes back a page.
+
+### Three ways to run it
+
+- **The window**: `CODDowngrader.exe`.
+- **The menus in a console**: `CODDowngrader cli`. The same steps as questions, answered with the arrow
+  keys.
+- **One command at a time**: `CODDowngrader <command>`, for scripts and other programs. See
+  [Command line](#command-line).
+
+## Going back to a date
+
+**Go back to a date** takes a day and finds the build the game had at the end of it. When the builds known
+here reach that far back, that build is chosen, named as the list names it.
+
+When they do not, because the date is older than every update known here or some depots' manifests from
+then are not known, COD Downgrader shows each depot it needs, with its SteamDB page:
+
+1. **Open on SteamDB** opens `steamdb.info/depot/<depot>/manifests/`.
+2. Select the rows of the manifests table there, or just the manifest ID you want, and copy them.
+3. Paste into that depot's box. From rows with dates, COD Downgrader takes the newest manifest SteamDB
+   first saw on or before your date, and says which one it took.
+
+**Copy all links** puts every page on the clipboard at once. **Continue** makes that build the chosen
+version. [SteamDB](https://steamdb.info) does not allow automated access, so COD Downgrader never reads it:
+the pages open in your browser, and what you paste is all it sees.
+
+## Versions from SteamDB
+
+[SteamDB](https://steamdb.info) records every manifest of every depot, going back years. It is where to
+get a build the built-in list does not have, or a depot it does not cover, such as a language.
+
+**Enter manifest IDs** lists every depot of the game with its SteamDB page. Paste into the
+depots you want on another build; each depot left empty keeps the build it is on, so only the depots that
+changed need an ID. A box takes the rows of SteamDB's table, a manifest ID alone, or the depot and manifest
+in either of these forms:
+
+```
+311211 7651791086710252932
+download_depot 311210 311211 7651791086710252932
+```
+
+In the menus, **Paste manifest IDs** takes the same lines, one per line, and **Pick a known manifest** picks
+one for a single depot from the built-in list, what is remembered, the manifest cache and the content log.
+
+## Remembered manifests
+
+COD Downgrader keeps every manifest it learns on this PC: the ones Steam has installed, cached, logged and
+lists as latest, and every one you paste or name. Steam deletes its manifest cache and rotates its log, and
+the builds those told of stay known here. Manifests pasted from SteamDB's table keep SteamDB's dates, so
+they build history the way the built-in list does, which is how Infinite Warfare, Modern Warfare
+Remastered and WWII get builds before their updates.
+
+They are in `remembered.txt` in COD Downgrader's folder (see [Files](#files)). **Settings** shows how many
+there are and forgets them. Started with `--no-remember`, COD Downgrader remembers nothing new that run,
+whichever way it runs: `CODDowngrader --no-remember`, `CODDowngrader cli --no-remember`, or on any
+command. What is remembered already is still used.
 
 ## Where the versions come from
 
@@ -75,36 +155,15 @@ keeps records of the builds it had:
   build after Steam has deleted its manifests.
 - **Steam's product info.** The client's `appinfo.vdf` names the latest build of every game.
 
-COD Downgrader puts these together into whole builds. It works back from the installed build one
-update at a time, and each step only reverts the depots that update changed, so a version never mixes
-a depot from one build with a depot from another. A build that both this PC and the built-in list name
-is shown once, with the list's date.
-
-## Versions from SteamDB
-
-[SteamDB](https://steamdb.info) records every manifest of every depot, going back years. It is where to
-get a build the built-in list does not have, or a depot it does not cover, such as a language. SteamDB
-does not allow automated access, so COD Downgrader does not read it: it opens the page in your browser,
-and you paste the ID.
-
-1. Choose **Enter manifest IDs from SteamDB**.
-2. **Open a depot's manifest list on SteamDB** opens `steamdb.info/depot/<depot>/manifests/`.
-3. Find the date you want, copy the manifest ID, and choose **Paste manifest IDs**. One per line,
-   either as a depot and a manifest, or as the `download_depot` command:
-
-   ```
-   311211 7651791086710252932
-   download_depot 311210 311211 7651791086710252932
-   ```
-
-Only the depots that changed need an ID. Every other depot stays on the manifest that is installed.
-**Pick a known manifest** does the same for a single depot, from the built-in list, the manifest cache
-and the content log.
+COD Downgrader puts these, and what it remembers, together into whole builds. It works back from the
+installed build one update at a time, and each step only reverts the depots that update changed, so a
+version never mixes a depot from one build with a depot from another. A build that both this PC and the
+built-in list name is shown once, with the list's date.
 
 ## Into the installed game
 
-**Put it into the installed game** turns the Steam install itself into the chosen build, downloading only
-what differs between the two:
+**Put it into the game** turns the Steam install itself into the chosen build, downloading only what
+differs between the two:
 
 1. Every file in a Steam manifest carries a SHA-1, so COD Downgrader compares the installed build's file
    list with the chosen build's and knows exactly which files differ. When Steam on this PC no longer
@@ -114,8 +173,13 @@ what differs between the two:
 3. DepotDownloader downloads only the files that differ, into `COD Downgrader\Staging` in the game's
    Steam library, and every one is checked against the build.
 4. With the game closed, they are swapped in, and files the chosen build does not have are removed.
-   COD Downgrader asks whether to keep the files this replaces in `COD Downgrader\Backups`, so **Undo the
-   downgrade** can put them back without downloading. The staging folder is then deleted.
+   The files this replaces can be kept in `COD Downgrader\Backups`, so **Undo the downgrade** puts them
+   back without downloading. The staging folder is then deleted.
+
+Undo puts each file back from the backup. Any file the backup does not hold, because none was kept or it has
+gone, is downloaded from Steam at the build Steam has installed: the patch run the other way. Files the build
+added are deleted, and files Steam has put back since stay as they are. The page before it says which files come
+from where.
 
 The update that broke a client is often small. Black Ops III before its update of 10 Sep 2026 differs
 from the build after it by `BlackOps3.exe` alone, 101 MB, and Black Ops II by its three exes, 36 MB.
@@ -129,10 +193,10 @@ the game's depots are ever touched: a client's or a mod's own files stay where t
 Steam personalizes some exes for your account when it installs a game, rewriting part of each and signing
 it: Black Ops's, Black Ops II's, and the Modern Warfare 2 and 3 campaign exes from before 3 Sep 2026.
 Steam only does this for the build it installs, so a build with a different exe gets Steam's original.
-Where the chosen build has the same exe as the installed one, COD Downgrader asks whether to keep your
+Where the chosen build has the same exe as the installed one, you choose whether to keep your
 personalized copy or put Steam's original in its place.
 
-Before anything is downloaded, COD Downgrader asks which of the files that differ go in:
+You also choose which of the files that differ go in:
 
 - **Everything that differs**: the whole build.
 - **Only the content**: maps, fastfiles and every other file, keeping your installed exes and DLLs.
@@ -140,7 +204,7 @@ Before anything is downloaded, COD Downgrader asks which of the files that diffe
 - **Choose folders and files**: a checklist of every file that differs, grouped by folder, where a whole
   folder is picked at once.
 
-The game's menu names the part written after the build, and Undo takes it out the same way.
+The game's page names the part written after the build, and Undo takes it out the same way.
 
 This is how a map pack or other DLC goes back to an earlier version while the game keeps its current exe.
 Most map packs changed after release: Black Ops II's and Black Ops III's DLC went through many versions,
@@ -151,50 +215,79 @@ current builds.
 
 Steam still lists its latest build for the game. **Verify integrity of game files**, or Steam's next
 update of the game, brings latest files back, and a game with an update queued in Steam gets them when
-Steam installs it. The game's menu shows when Steam has changed the files since, and offers **Downgrade
+Steam installs it. The game's page shows when Steam has changed the files since, and offers **Downgrade
 again**.
 
 ## Patch folders
 
 **Save a patch folder** makes a minimal build: only the files that differ from another build, with
-`COD Downgrader patch.json` naming both builds, every file's SHA-1 and the files the patch removes. It
-asks which build the patch starts from: the latest on Steam, the build installed in the game, or any
+`COD Downgrader patch.json` naming both builds, every file's SHA-1 and the files the patch removes. You
+choose the build the patch starts from: the latest on Steam, the build installed in the game, or any
 other known build. The chosen version can be newer than that one, so a patch from an older build to the
-latest takes a downgraded game back up without Steam. With one kept, the game can be downgraded again without downloading after Verify integrity of
-game files has put its latest files back. It asks the same question as putting a build into the game, and
-the patch holds only the part chosen.
+latest takes a downgraded game back up without Steam. With one kept, the game can be downgraded again
+without downloading after Verify integrity of game files has put its latest files back. A patch can hold
+only part of a build, the same way as putting a build into the game.
 
-**Apply a patch or a downloaded build to this game**, in the game's menu, puts a patch folder into the
-installed game the same way, after checking every file in the folder. A patch made from a different build
-than the game is on is flagged first. It takes a folder a whole build was downloaded into as well, asks
-which of its files go in, and afterwards offers to delete that folder.
+**Open a build** puts a patch folder into its installed game the same way, after
+checking every file in the folder. A patch made from a different build than the game is on is flagged
+first. It takes a folder a whole build was downloaded into as well, lets you choose which of its files go
+in, and can delete that folder afterwards.
+
+## Sharing a build
+
+A downgrade, a patch or a download you made can go to anyone else who owns the game. **Share** at the end of
+one or on it in **Your builds**, **Share this downgrade** on the game's page, **Share this build** for the chosen
+version, and **Share it** for a patch folder or a downloaded build in **Open a build** each give a few lines of
+text to copy into a message or save as a file:
+
+```
+COD Downgrader shared build
+game 202990 Call of Duty: Black Ops II - Multiplayer
+title Before the update of 10 Feb 2015
+manifest 202991=8255716060272897409
+manifest 202992=6516382015411692772
+only binaries
+```
+
+It names the game, the manifest of each of its depots (one line each), the files that were chosen, and
+whether the game sharing the folder went along. It holds no game files. Whoever you send it to chooses **Open a
+build**, pastes it or opens the file, and has that build chosen on the game's page with the same files ticked. From there it is theirs to put into the game, download or save as a patch, and every file comes from
+Steam to their own account, so it only works for someone who owns the game.
+
+A build their PC already knows keeps the name it has there. Depots their copy of the game does not have are
+left out, and depots the shared build does not name keep the build they are on; the page says when either
+happens. In the menus, **Paste manifest IDs** takes a shared build too.
 
 ## Signing in
 
-DepotDownloader signs in to Steam itself, in the same window:
+DepotDownloader signs in to Steam itself, in a console of its own:
 
 - **QR code**: scan it with the Steam mobile app and approve.
-- **Account name and password**: COD Downgrader asks for the account name; the password and the Steam
-  Guard code are typed into DepotDownloader's own prompt.
+- **Account name and password**: the password and the Steam Guard code are typed into DepotDownloader's
+  own prompt.
 
-COD Downgrader never sees a password. DepotDownloader keeps the login, so the next download only needs
-the account name, which COD Downgrader remembers and offers first. If Steam drops DepotDownloader's
-connection while the QR code is on screen and the sign-in is lost after you approve it, COD Downgrader
-starts the download again with the saved login.
+From the window, and from a command, the sign-in opens in a window of its own the
+first time it is needed, and again if Steam stops accepting the saved one, and COD Downgrader carries on once
+it is done. Downloads themselves run out of sight. In the menus it happens in the same
+console. **Settings** signs in, or signs in with another account, whenever you like.
+
+COD Downgrader never sees a password, and neither does any program that runs COD Downgrader. DepotDownloader
+keeps the login, so this happens once. If Steam drops DepotDownloader's connection while the QR code is on
+screen and the sign-in is lost after you approve it, COD Downgrader starts the download again with the
+saved login.
 
 ## Starting from your installed copy
 
-For an installed game, COD Downgrader offers to copy the files the chosen build shares with your
-install into the new folder before downloading. When Steam still has both builds' manifests, only files
-whose contents are identical are copied. DepotDownloader then checks every file already in the folder
-piece by piece and downloads only the pieces that differ. When only the installed build's file list is
-known, its files are copied, and the ones the chosen build does not have are removed once the download
-has finished.
+For an installed game, a download into a folder of its own can start from your installed copy: the files
+the chosen build shares with your install are copied into the new folder first. When Steam still has both
+builds' manifests, only files whose contents are identical are copied. DepotDownloader then checks every
+file already in the folder piece by piece and downloads only the pieces that differ. When only the
+installed build's file list is known, its files are copied, and the ones the chosen build does not have
+are removed once the download has finished.
 
 Exes Steam personalizes for your account are never copied: DepotDownloader downloads Steam's originals.
-When your installed game has a personalized copy of the same exe, COD Downgrader asks once the download
-has finished whether the folder gets that copy or keeps Steam's original. Applying the folder to the game
-later accepts either.
+Where your installed game has a personalized copy of the same exe, you choose whether the folder gets that
+copy or keeps Steam's original. Applying the folder to the game later accepts either.
 
 ## What ends up in the folder
 
@@ -214,7 +307,7 @@ Beside the game files:
   where a download stopped, and a different build is never written over a folder without asking.
 
 When a download does not finish, COD Downgrader shows why and offers to try again, carrying on from
-where it stopped. **Ctrl+C** stops a download.
+where it stopped.
 
 ## Games
 
@@ -240,8 +333,8 @@ Any other installed Steam app with *Call of Duty* in its name is listed as well,
 Ops III Mod Tools.
 
 The built-in list covers every game in the table except Infinite Warfare, Modern Warfare Remastered and
-WWII, and it covers the Black Ops III Mod Tools. For those three, the versions come from this PC and
-from SteamDB.
+WWII, and it covers the Black Ops III Mod Tools. For those three, the versions come from this PC, from
+what is remembered, and from SteamDB.
 
 Modern Warfare (2019), Black Ops Cold War, Vanguard, Modern Warfare II, Modern Warfare III, Black Ops 6
 and the Call of Duty app (Black Ops 7, Warzone) are listed but not downloadable. They need Activision's
@@ -249,18 +342,24 @@ servers, and those only accept the current version.
 
 ## Command line
 
-Run it with nothing after it for the menus. Give it a command and it asks nothing, does that one thing
-and stops, which is what a script or another program uses.
+Give COD Downgrader a command and it asks nothing, does that one thing and stops, which is what a script
+or another program uses. On Windows, type `CODDowngrader`, not `CODDowngrader.exe`: that runs
+`CODDowngrader.com`, which the terminal waits for.
 
 ```
 CODDowngrader list                          Steam, the games, and every build known for them
 CODDowngrader builds 202990                 the builds of one game, and what to call each one
+CODDowngrader builds 202990 --at 2015-03-12 which build the game had on that day
 CODDowngrader status                        what is installed, and any build written into it
 CODDowngrader download 311210 --build 2026-09-10 --to "X:\BO3 old"
 CODDowngrader ingame 202990 --build 2026-09-10 --only content
+CODDowngrader ingame 202990 --at 2015-03-12 --plan
 CODDowngrader patch 202990 --build 2026-09-10 --from latest --to "X:\BO2 patch"
 CODDowngrader apply 202990 --from "X:\BO2 patch"
 CODDowngrader undo 202990
+CODDowngrader history                       every download, downgrade and patch folder made here
+CODDowngrader share 202990 --build 2015-02-10 --only binaries --to "X:\shared"
+CODDowngrader ingame --shared "X:\shared\COD Downgrader build - Call of Duty - Black Ops II - Multiplayer - Before the update of 10 Feb 2015.txt"
 CODDowngrader login
 CODDowngrader export "X:\exports"
 ```
@@ -269,8 +368,9 @@ CODDowngrader export "X:\exports"
 
 **Naming a game**: its Steam app ID, or part of its name, so `202990` and `"black ops ii - multi"` are the
 same game. **Naming a build**: `--build 2026-09-10` is the build before that day's update, the same way the
-menus name it; `--build latest` and `--build installed` are what Steam has now and what is in the game
-folder now. `CODDowngrader builds <game>` prints the name to use for every build it knows:
+window and the menus name it; `--build latest` and `--build installed` are what Steam has now and what is in
+the game folder now. `--at 2015-03-12` is the build the game had at the end of that day, or at a time with
+`--at 2015-03-12T18:30`. `CODDowngrader builds <game>` prints the name to use for every build it knows:
 
 ```
 Call of Duty: Black Ops II - Multiplayer [202990]
@@ -280,19 +380,22 @@ Call of Duty: Black Ops II - Multiplayer [202990]
 ```
 
 For a build the list does not have, name its depots instead: `--manifest 311211=9084453472036406216`,
-once per depot. Every depot not named keeps the build it is on. `CODDowngrader builds <game> --json` lists
-every manifest this PC knows of each depot, with when it was built, when Steam fetched it and when SteamDB
-first saw it, so a program can pick one the same way the menus do.
+once per depot. Every depot not named keeps the build it is on. When `--at` names a day the builds known
+here do not reach, the command lists each depot it needs with its SteamDB page, and `--manifest` fills them
+in. `CODDowngrader builds <game> --json` lists every manifest known of each depot, with when it was built,
+when Steam fetched it, when SteamDB first saw it and whether it is only remembered.
 
 | Option | What it does |
 |---|---|
-| `--to <folder>` | Where a download, a patch or an export goes |
+| `--to <folder>` | Where a download, a patch, an export or a shared build goes |
 | `--from <build\|folder>` | `patch`: the build it starts from. `apply`: the folder to take |
 | `--only <what>` | `all` (the default), `content` (keep your exes and DLLs), or `binaries` |
 | `--files <name,name>` | Only these files of the build, instead of `--only` |
+| `--shared <file>` | `download`, `ingame`, `patch`: the build a shared build names, with the files and options it came with. `-` reads it from standard input. `--only` and `--files` still choose the part |
 | `--exe <steam\|installed>` | Which copy of an exe Steam personalizes for your account: `steam` puts Steam's original in, `installed` takes the copy from your installed game. Left out, a download keeps Steam's original and the installed game keeps its own copy |
 | `--backup <yes\|no>` | Keep the files a downgrade replaces, so `undo` can put them back. `yes` unless told otherwise |
-| `--again` | `ingame`: take the build already written in out first, then write this one in |
+| `--plan` | Work out and print what would change, file by file with `--json`, and change nothing. `undo` too |
+| `--again` | `ingame`, `apply`: take the build already written in out first, then put this one in |
 | `--siblings` | `ingame`: take a game sharing the folder back to its build from the same time as well |
 | `--no-seed` | `download`: fetch everything instead of copying what the installed game already has |
 | `--delete` | `apply`: delete the folder once the game has what it needs from it |
@@ -300,16 +403,22 @@ first saw it, so a program can pick one the same way the menus do.
 | `--json` | One JSON object of what happened, instead of the human report |
 | `--login <auto\|saved\|window\|never>` | How to sign in, see below |
 | `--username <account>` | Sign in as this account instead of the last one used |
+| `--no-remember` | Remember nothing new this run: no manifests, and nothing added to `history` |
 | `--steam <folder>` | Use this Steam folder instead of looking for one |
 | `--depotdownloader <path>` | Use this DepotDownloader instead of fetching one |
 | `--no-color` | Plain output |
 
 A command works on the game it is given. Where two Call of Duty apps share a folder, as Black Ops II's
-Multiplayer and Zombies do, `ingame --siblings` takes each of them back to its own build from the same time,
-the way the menus offer to; without it the other app is left alone and the command says so.
+Multiplayer and Zombies do, `ingame --siblings` takes each of them back to its own build from the same time;
+without it the other app is left alone and the command says so.
 
 Steam puts its own files back when it verifies or updates a game. `ingame --again` writes the build in again
-over that, taking the one recorded in the folder out first. `CODDowngrader --list` and `--export` still do
+over that, taking the one recorded in the folder out first.
+
+`share` prints a shared build, or saves it with `--to`: the build `--build`, `--at` or `--manifest` names, with
+`--only`, `--files` and `--siblings`; a patch folder or a downloaded build with `--from`; and with none of those,
+the downgrade written into the game. `history` lists what has been made, newest first, with where each build is
+now; with `--json`, each carries its shared build too. `CODDowngrader --list` and `--export` still do
 what they always did.
 
 ### Signing in from a command
@@ -317,11 +426,11 @@ what they always did.
 Steam will not send a game's files to nobody, so anything that downloads needs an account. DepotDownloader
 signs in and keeps the sign-in, so this only happens once.
 
-**`CODDowngrader login`** signs in, in the window it runs in. When a command has to download and no account
-is signed in, it starts that window itself, waits for it, and carries on. A program that runs COD Downgrader
-therefore never has to handle a sign-in: the only thing the person sees is DepotDownloader's own prompt, and
-the password or Steam Guard code goes into DepotDownloader and nothing else. COD Downgrader has no
-`--password` option and refuses one.
+**`CODDowngrader login`** signs in, in the terminal it runs in. When a command has to download and no account
+is signed in, it opens a sign-in window itself, waits for it, and carries on. A program that runs COD
+Downgrader therefore never has to handle a sign-in: the only thing the person sees is DepotDownloader's own
+prompt, and the password or Steam Guard code goes into DepotDownloader and nothing else. COD Downgrader has
+no `--password` option and refuses one.
 
 `--login` decides what a command may do about it: `auto` uses the account that is signed in and opens a
 window when there is none, `saved` never opens a window, `window` always opens one, and `never` fails
@@ -333,22 +442,31 @@ instead of signing in.
 
 ```json
 {
-  "tool": "COD Downgrader 1.0.3",
+  "tool": "COD Downgrader 1.1.0",
   "command": "ingame",
   "ok": true,
   "exitCode": 0,
   "game": { "app": 202990, "name": "Call of Duty: Black Ops II - Multiplayer" },
   "build": { "key": "2015-02-10", "title": "Before the update of 10 Feb 2015", "part": "content only" },
-  "folder": "X:\Steam\steamapps\common\Call of Duty Black Ops II",
+  "folder": "X:\\Steam\\steamapps\\common\\Call of Duty Black Ops II",
   "written": 3,
   "removed": 0,
-  "backup": "X:\Steam\COD Downgrader\Backups\Call of Duty Black Ops II 2026-09-16 011333"
+  "backup": "X:\\Steam\\COD Downgrader\\Backups\\Call of Duty Black Ops II 2026-09-16 011333",
+  "shared": "COD Downgrader shared build\ngame 202990 Call of Duty: Black Ops II - Multiplayer\n..."
 }
 ```
 
-A command that did not work says why in the same shape: `"ok": false` and
-`"error": { "code": "signin", "message": "..." }`. The codes are words to switch on, such as `signin`,
-`locked`, `not-owned`, `no-build`, `already-applied` and `incomplete`.
+`download`, `ingame`, `patch` and `apply` carry `shared`, the shared build of what they made.
+
+With `--plan`, the object carries a `plan`: every file that would be written with its depot, size and
+whether it is already in place or an exe Steam personalizes, what would be removed, files a mod has
+replaced, files in use, and the games sharing the folder. For `undo` the plan lists the files coming back from
+the backup, from Steam, deleted, kept because Steam has put them back, and any that cannot come back.
+`ingame`, `apply` and `undo` carry `change` as well: what the game holds now, what it will hold, and each depot
+whose manifest changes. A command that did not work says why in the same
+shape: `"ok": false` and `"error": { "code": "signin", "message": "..." }`. The codes are words to switch
+on, such as `signin`, `locked`, `not-owned`, `no-build`, `needs-manifests`, `already-applied` and
+`incomplete`; `needs-manifests` comes with a `needs` list of the depots and their SteamDB pages.
 
 | Exit code | Meaning |
 |---|---|
@@ -361,15 +479,19 @@ A command that did not work says why in the same shape: `"ok": false` and
 
 ## Files
 
+COD Downgrader's own folder is `%LOCALAPPDATA%\COD Downgrader`.
+
 | Path | Holds |
 |---|---|
-| `%LOCALAPPDATA%\COD Downgrader\tools\` | DepotDownloader, fetched on first use |
-| `%LOCALAPPDATA%\COD Downgrader\settings.json` | the Steam account name and the last folder used |
-| `%LOCALAPPDATA%\COD Downgrader\logs\` | DepotDownloader's full output for every download |
-| `%LOCALAPPDATA%\COD Downgrader\manifests\` | file lists DepotDownloader fetched, so none is fetched twice |
-| `%LOCALAPPDATA%\COD Downgrader\applied\` | what was put into each installed game, for Undo |
-| `COD Downgrader\Staging\` in a Steam library | files on their way into a game |
-| `COD Downgrader\Backups\` in a Steam library | the files they replaced, when kept |
+| `tools/` | DepotDownloader, fetched on first use |
+| `settings.json` | the Steam account name and the last folder used |
+| `remembered.txt` | every manifest remembered on this PC |
+| `builds.json` | every download, downgrade and patch folder made on this PC, for Your builds |
+| `logs/` | DepotDownloader's full output for every download |
+| `manifests/` | file lists DepotDownloader fetched, so none is fetched twice |
+| `applied/` | what was put into each installed game, for Undo |
+| `COD Downgrader/Staging/` in a Steam library | files on their way into a game |
+| `COD Downgrader/Backups/` in a Steam library | the files they replaced, when kept |
 
 ## DepotDownloader
 
@@ -380,20 +502,27 @@ extracts it only if the zip's SHA-256 matches the hash published for that releas
 
 ## Building from source
 
-You need the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), and Python 3 for the
-packaging script.
+You need the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), Python 3 for the packaging
+script, and Visual Studio's C++ build tools, which `CODDowngrader.com` is compiled with.
 
 ```
 dotnet test tests/CODDowngrader.Tests
 python tools/build.py
 ```
 
-`tools/build.py` runs the tests, publishes `CODDowngrader.exe` as one self-contained file for win-x64,
-and writes the release zip and its `SHA256SUMS` to `dist/v<version>/`.
+`tools/build.py` runs the tests, publishes the program as one self-contained file for win-x64 beside
+`CODDowngrader.com`, and writes the release zip and its `SHA256SUMS` to `dist/v<version>/`.
+
+- `src/CODDowngrader.Core` is everything but the window: Steam, the builds, downloading, patching, the menus
+  and the command line.
+- `src/CODDowngrader` is the window, and the program's entry point.
+- `src/CODDowngrader.Stub` is `CODDowngrader.com`.
+- `tools/GuiShots` draws every page of the window to a PNG from this PC's Steam data:
+  `dotnet run --project tools/GuiShots -- <folder>`.
 
 ### Updating the built-in list
 
-The list is `src/CODDowngrader/Catalog/manifests.txt`, built into the exe. After an update, copy the
+The list is `src/CODDowngrader.Core/Catalog/manifests.txt`, built into the program. After an update, copy the
 rows of each changed depot from `steamdb.info/depot/<depot>/manifests/` into a text file, laid out as
 `tools/catalog.py` describes, and merge them:
 
@@ -412,6 +541,29 @@ It takes the manifest rows, each depot's name and owning app, and the depots a d
 out, such as low-violence content.
 
 ## Changelog
+
+### v1.1.0
+
+- **A window.** Pick a game, pick a version, see what changes before anything does, choose, and start, with
+  progress, Cancel, and the full log a click away. Undo, Downgrade again, applying a folder, part of a
+  build, the personalized exe, games sharing a folder and signing in are all there. The menus are
+  `CODDowngrader cli`, and every command works as before.
+- **Going back to a date**: the build a game had on a day you pick. Where that is not known here, COD
+  Downgrader shows each depot's SteamDB page, takes the rows you paste, and picks the manifest for that day.
+  The command line has it as `--at`.
+- **Remembered manifests**: every manifest COD Downgrader learns on this PC is kept, so builds stay known
+  after Steam deletes its own records, and pasted SteamDB rows give Infinite Warfare, Modern Warfare
+  Remastered and WWII their history. `--no-remember` turns that off for a run.
+- **Sharing a build**: a downgrade, a patch or a download becomes a few lines of text to send to someone who
+  owns the game, and **Open a build** gets them the same build, with the same files chosen, from Steam.
+  The command line has `share` and `--shared`.
+- **Your builds** lists every downgrade, download and patch folder made on this PC, to find again or share;
+  the command line has it as `history`.
+- **Undo without a backup**: files the backup does not hold come back from Steam, at the build Steam has
+  installed, and every change to a game starts on a page of what it has now and what it will have.
+- **`--plan`** works out what a command would change and changes nothing.
+- `CODDowngrader.com` sits beside `CODDowngrader.exe`: typing `CODDowngrader` in a terminal runs it, so the
+  terminal waits and gets the exit code, and a double-click on the exe opens only the window.
 
 ### v1.0.3
 
@@ -457,9 +609,9 @@ First release.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). `CODDowngrader.exe` contains the .NET runtime and Spectre.Console, both
-MIT; their notices are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). DepotDownloader is GPL-2.0
-and is not part of this download.
+MIT, see [LICENSE](LICENSE). The program contains the .NET runtime, Spectre.Console, Avalonia, SkiaSharp and
+HarfBuzzSharp, all MIT, and on Windows ANGLE, BSD; their notices are in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). DepotDownloader is GPL-2.0 and is not part of this download.
 
 COD Downgrader is not affiliated with or endorsed by Activision, Valve or SteamDB. Call of Duty is a
 trademark of Activision Publishing, Inc.; Steam is a trademark of Valve Corporation. COD Downgrader

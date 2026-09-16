@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.SetupPage"
+             x:DataType="vm:SetupPageViewModel">
+  <Border Classes="card" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560" Margin="28">
+    <StackPanel Spacing="12">
+      <TextBlock Text="{Binding Title}" Classes="h2" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+      <Button Classes="accent" Content="Choose the Steam folder" Command="{Binding ChooseCommand}" IsVisible="{Binding ShowChoose}" HorizontalAlignment="Left" />
+    </StackPanel>
+  </Border>
+</UserControl>

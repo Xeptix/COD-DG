@@ -1,0 +1,111 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.GamePage"
+             x:DataType="vm:GamePageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar" IsVisible="{Binding Downgradable}">
+      <WrapPanel Margin="28,14,28,14" Orientation="Horizontal">
+        <Button Classes="accent" Content="Put it into the game" Command="{Binding InGameCommand}" IsVisible="{Binding IsInstalled}" Margin="0,0,10,0"
+                ToolTip.Tip="Downloads only the files that differ from what is installed, and swaps them in. Undo puts the old ones back." ToolTip.ShowOnDisabled="True" />
+        <Button Content="Download into a folder of its own" Command="{Binding DownloadCommand}" Margin="0,0,10,0"
+                ToolTip.Tip="The whole game at this build, in a folder Steam never touches or updates." ToolTip.ShowOnDisabled="True" />
+        <Button Content="Save a patch folder" Command="{Binding PatchCommand}" Margin="0,0,10,0"
+                ToolTip.Tip="Only the files that differ from another build, to put into the game later." ToolTip.ShowOnDisabled="True" />
+        <Button Content="Share this build" Command="{Binding ShareCommand}" Margin="0,0,14,0"
+                ToolTip.Tip="A few lines of text anyone who owns the game can open to get this build from Steam." ToolTip.ShowOnDisabled="True" />
+        <TextBlock Text="{Binding InGameHint}" Classes="muted" VerticalAlignment="Center" Margin="0,0,14,0" />
+        <TextBlock Text="{Binding ShareMessage}" IsVisible="{Binding HasShareMessage}" Classes="error" VerticalAlignment="Center" TextWrapping="Wrap" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="18" MaxWidth="920" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <Grid ColumnDefinitions="Auto,*">
+            <Image Source="{Binding Icon}" IsVisible="{Binding HasIcon}" Width="40" Height="40" Margin="0,0,14,0" VerticalAlignment="Center"
+                   RenderOptions.BitmapInterpolationMode="HighQuality" />
+            <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="h1" TextWrapping="Wrap" VerticalAlignment="Center" />
+          </Grid>
+          <TextBlock Text="{Binding Folder}" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+          <Button Content="Open the game folder" Command="{Binding OpenFolderCommand}" IsVisible="{Binding IsInstalled}" HorizontalAlignment="Left" Margin="0,6,0,0" />
+        </StackPanel>
+
+        <Border Classes="card" IsVisible="{Binding !Downgradable}">
+          <TextBlock Text="{Binding NotDowngradable}" TextWrapping="Wrap" />
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding HasApplied}">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{Binding AppliedText}" TextWrapping="Wrap" />
+            <WrapPanel>
+              <Button Classes="accent" Content="Downgrade again" Command="{Binding AgainCommand}" IsVisible="{Binding CanAgain}" Margin="0,0,10,0" />
+              <Button Content="Undo the downgrade" Command="{Binding UndoCommand}" Margin="0,0,10,0" />
+              <Button Content="Share this downgrade" Command="{Binding ShareAppliedCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <StackPanel Spacing="8" IsVisible="{Binding Downgradable}">
+          <TextBlock Text="Choose a version" Classes="h2" />
+          <TextBlock Text="{Binding Notice}" IsVisible="{Binding HasNotice}" TextWrapping="Wrap" />
+          <ProgressBar IsIndeterminate="True" IsVisible="{Binding Loading}" Width="220" HorizontalAlignment="Left" />
+          <Border Classes="card" Padding="6">
+            <ListBox Classes="list" ItemsSource="{Binding Builds}" SelectedItem="{Binding SelectedBuild}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:BuildItem">
+                  <StackPanel Spacing="1" Margin="0,4">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Detail}" Classes="muted small" IsVisible="{Binding HasDetail}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+        </StackPanel>
+
+        <Border Classes="card" IsVisible="{Binding Downgradable}">
+          <StackPanel>
+            <TextBlock Text="Not in the list?" Classes="h3" Margin="0,0,0,12" />
+
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+              <StackPanel Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                <TextBlock Text="Go back to a date" FontWeight="SemiBold" />
+                <TextBlock Classes="muted small" TextWrapping="Wrap"
+                           Text="The build the game had on a day you pick. When it is not known here, COD Downgrader shows which SteamDB pages have its manifests." />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <CalendarDatePicker SelectedDate="{Binding AtDate}" Watermark="Pick a date" Width="160" />
+                <Button Content="Find that build" Command="{Binding FindAtCommand}" />
+              </StackPanel>
+              <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding AtMessage}" IsVisible="{Binding HasAtMessage}" TextWrapping="Wrap" Margin="0,10,0,0" />
+            </Grid>
+
+            <Border Classes="divider" />
+
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                <TextBlock Text="Manifests from SteamDB" FontWeight="SemiBold" />
+                <TextBlock Classes="muted small" TextWrapping="Wrap"
+                           Text="Any other build: open each depot's page on SteamDB, and paste the manifest you want." />
+              </StackPanel>
+              <Button Grid.Column="1" Content="Enter manifest IDs" Command="{Binding ManualCommand}" VerticalAlignment="Center" />
+            </Grid>
+
+            <Border Classes="divider" />
+
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                <TextBlock Text="A shared build, or a folder you have" FontWeight="SemiBold" />
+                <TextBlock Classes="muted small" TextWrapping="Wrap"
+                           Text="A build someone sent you, or a patch folder or downloaded build already on this PC." />
+              </StackPanel>
+              <Button Grid.Column="1" Content="Open a build" Command="{Binding OpenBuildCommand}" VerticalAlignment="Center" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

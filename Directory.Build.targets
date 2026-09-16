@@ -1,0 +1,10 @@
+<Project>
+
+  <!--
+    Avalonia.BuildServices runs AvaloniaStatsTask before every compile, sending the project's name, target framework, runtime
+    and Avalonia version to Avalonia's build statistics. It ships nothing in the program. This replaces that step with one
+    that does nothing, so building COD Downgrader sends nothing anywhere.
+  -->
+  <Target Name="AvaloniaStats" />
+
+</Project>

@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.SettingsPage"
+             x:DataType="vm:SettingsPageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar">
+      <WrapPanel Margin="28,14,28,14">
+        <Button Content="Back" Command="{Binding BackCommand}" MinWidth="110" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="16" MaxWidth="920" HorizontalAlignment="Stretch">
+        <TextBlock Text="Settings" Classes="h1" />
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Steam" Classes="h3" />
+            <TextBlock Text="{Binding SteamFolder}" TextWrapping="Wrap" />
+            <Button Content="Use another Steam folder" Command="{Binding ChangeSteamCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Signing in" Classes="h3" />
+            <TextBlock Text="{Binding Account}" TextWrapping="Wrap" />
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="DepotDownloader signs in to Steam in a window of its own, with a QR code for the Steam mobile app or the account's name and password. COD Downgrader never sees a password. The sign-in is kept, so this happens once." />
+            <WrapPanel>
+              <Button Content="Sign in" Command="{Binding SignInCommand}" Margin="0,0,10,0" />
+              <Button Content="Sign in with another account" Command="{Binding SignInOtherCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Remembered manifests" Classes="h3" />
+            <TextBlock Text="{Binding RememberedText}" TextWrapping="Wrap" />
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="Every manifest COD Downgrader learns on this PC is kept: what Steam shows, and what you paste from SteamDB. Builds stay known after Steam deletes its own records of them." />
+            <TextBlock Text="{Binding RememberNote}" IsVisible="{Binding HasRememberNote}" Classes="warn" TextWrapping="Wrap" />
+            <WrapPanel>
+              <Button Content="Open the folder" Command="{Binding OpenFolderCommand}" Margin="0,0,10,0" />
+              <Button Content="{Binding ForgetLabel}" Command="{Binding ForgetCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="DepotDownloader" Classes="h3" />
+            <TextBlock Text="{Binding DepotDownloader}" TextWrapping="Wrap" />
+            <Button Content="Open the logs" Command="{Binding LogsCommand}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,14 @@
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\bin\Debug\net8.0\CODDowngrader.exe
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\bin\Debug\net8.0\CODDowngrader.deps.json
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\bin\Debug\net8.0\CODDowngrader.runtimeconfig.json
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\bin\Debug\net8.0\CODDowngrader.dll
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\bin\Debug\net8.0\CODDowngrader.pdb
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\CODDowngrader.Stub.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\CODDowngrader.Stub.AssemblyInfoInputs.cache
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\CODDowngrader.Stub.AssemblyInfo.cs
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\CODDowngrader.Stub.csproj.CoreCompileInputs.cache
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\CODDowngrader.dll
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\refint\CODDowngrader.dll
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\CODDowngrader.pdb
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\CODDowngrader.Stub.genruntimeconfig.cache
+D:\Projects\COD Downgrader\src\CODDowngrader.Stub\obj\Debug\net8.0\ref\CODDowngrader.dll

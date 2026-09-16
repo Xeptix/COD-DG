@@ -1,0 +1,194 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.ActionPage"
+             x:DataType="vm:ActionPageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar">
+      <WrapPanel Margin="28,14,28,14">
+        <Button Classes="accent" Content="{Binding StartLabel}" Command="{Binding StartCommand}" MinWidth="110" Margin="0,0,10,0" />
+        <Button Content="Back" Command="{Binding BackCommand}" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="16" MaxWidth="920" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding Title}" Classes="h1" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Subtitle}" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Classes="card" IsVisible="{Binding IsApply}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="The folder to take" Classes="h3" />
+            <TextBlock Text="A patch folder, or a folder COD Downgrader downloaded a whole build into." Classes="muted" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Text="{Binding Folder}" IsReadOnly="True" Watermark="No folder chosen" />
+              <Button Grid.Column="1" Content="Choose…" Command="{Binding BrowseCommand}" Margin="8,0,0,0" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding IsPatch}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Starting from" Classes="h3" />
+            <ComboBox ItemsSource="{Binding PatchStarts}" SelectedItem="{Binding PatchFrom}" MinWidth="380">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:BuildItem">
+                  <TextBlock Text="{Binding Title}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="A patch holds only the files that differ between that build and this one." Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding HasChange}">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto,*">
+              <StackPanel Spacing="2">
+                <TextBlock Text="In the game now" Classes="muted small" />
+                <TextBlock Text="{Binding ChangeNow}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="→" FontSize="22" Classes="muted" Margin="18,0" VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Spacing="2">
+                <TextBlock Text="After" Classes="muted small" />
+                <TextBlock Text="{Binding ChangeAfter}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding ChangeDepots}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DepotChange">
+                  <StackPanel>
+                    <Border Classes="divider" Margin="0,8" />
+                    <Grid ColumnDefinitions="*,Auto,*">
+                      <StackPanel Spacing="1">
+                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                        <TextBlock Classes="muted small" TextWrapping="Wrap">
+                          <Run Text="{Binding Depot}" />
+                          <Run Text=" · manifest " />
+                          <Run Text="{Binding Now}" />
+                        </TextBlock>
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="→" Classes="muted" Margin="18,0" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Classes="small" TextWrapping="Wrap" VerticalAlignment="Bottom">
+                        <Run Text="manifest " />
+                        <Run Text="{Binding After}" />
+                      </TextBlock>
+                    </Grid>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding ChangeUnchanged}" IsVisible="{Binding HasChangeUnchanged}" Classes="muted small" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding !ApplyWaitingForFolder}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="What changes" Classes="h3" />
+            <StackPanel IsVisible="{Binding IsPlanning}" Spacing="6">
+              <ProgressBar IsIndeterminate="True" Width="240" HorizontalAlignment="Left" />
+              <TextBlock Text="{Binding Stage}" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock Text="{Binding Summary}" IsVisible="{Binding Planned}" TextWrapping="Wrap" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding TopFiles}" IsVisible="{Binding HasTopFiles}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Classes="mono muted" TextWrapping="Wrap" Margin="0,1" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding PersonalizedWrites}" IsVisible="{Binding HasPersonalizedWrites}" Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Classes="warn" TextWrapping="Wrap" />
+            <StackPanel IsVisible="{Binding HasError}" Spacing="8">
+              <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap" />
+              <Button Content="Try again" Command="{Binding RetryCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding CanChoosePart}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Which files" Classes="h3" />
+            <RadioButton GroupName="part" Content="Everything that differs" IsChecked="{Binding PartEverything}" />
+            <RadioButton GroupName="part" Content="Only the content, keeping your installed exes and DLLs" IsChecked="{Binding PartContent}" IsVisible="{Binding CanChooseByKind}" />
+            <RadioButton GroupName="part" Content="Only the exes and DLLs, keeping your installed content" IsChecked="{Binding PartBinaries}" IsVisible="{Binding CanChooseByKind}" />
+            <RadioButton GroupName="part" Content="Choose folders and files" IsChecked="{Binding PartFiles}" />
+            <ItemsControl ItemsSource="{Binding Folders}" IsVisible="{Binding ChoosingFiles}" Margin="26,6,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FolderChoice">
+                  <Expander HorizontalAlignment="Stretch" Margin="0,2" IsExpanded="{Binding IsExpanded}">
+                    <Expander.Header>
+                      <CheckBox IsChecked="{Binding IsChecked}">
+                        <TextBlock>
+                          <Run Text="{Binding Name}" FontWeight="SemiBold" />
+                          <Run Text="  " />
+                          <Run Text="{Binding Summary}" />
+                        </TextBlock>
+                      </CheckBox>
+                    </Expander.Header>
+                    <ItemsControl ItemsSource="{Binding Files}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FileChoice">
+                          <CheckBox IsChecked="{Binding IsChecked}">
+                            <TextBlock TextWrapping="Wrap">
+                              <Run Text="{Binding Name}" />
+                              <Run Text="  " />
+                              <Run Text="{Binding SizeText}" />
+                            </TextBlock>
+                          </CheckBox>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Expander>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding HasPersonalizedCopies}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Your personalized exe" Classes="h3" />
+            <TextBlock Text="{Binding PersonalizedText}" Classes="muted" TextWrapping="Wrap" />
+            <RadioButton GroupName="exe" Content="Keep the copy Steam personalized for your account" IsChecked="{Binding KeepPersonalized}" />
+            <RadioButton GroupName="exe" Content="Put Steam's original in its place" IsChecked="{Binding UseSteamOriginal}" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding ChoosesDestination}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Where it goes" Classes="h3" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Text="{Binding Folder}" />
+              <Button Grid.Column="1" Content="Choose…" Command="{Binding BrowseCommand}" Margin="8,0,0,0" />
+            </Grid>
+            <CheckBox IsChecked="{Binding StartFromInstall}" IsVisible="{Binding CanStartFromInstall}">
+              <TextBlock Text="Start from your installed copy: the files it shares with this build are copied first, and only the rest is downloaded" TextWrapping="Wrap" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding CopyPersonalized}" IsVisible="{Binding CanStartFromInstall}">
+              <TextBlock Text="Where Steam personalized an exe for your account and this build has the same one, put your copy in the folder instead of Steam's original" TextWrapping="Wrap" />
+            </CheckBox>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding WritesIntoGame}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="In the game" Classes="h3" />
+            <TextBlock Text="{Binding AgainText}" IsVisible="{Binding Again}" TextWrapping="Wrap" />
+            <CheckBox IsChecked="{Binding KeepBackup}">
+              <TextBlock Text="Keep the files this replaces, so Undo can put them back without downloading" TextWrapping="Wrap" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding TakeSiblings}" IsVisible="{Binding HasSiblings}">
+              <TextBlock Text="{Binding SiblingsText}" TextWrapping="Wrap" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding DeleteAfter}" IsVisible="{Binding IsApply}">
+              <TextBlock Text="Delete the folder once the game has what it needs from it" TextWrapping="Wrap" />
+            </CheckBox>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

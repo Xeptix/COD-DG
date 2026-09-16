@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.OpenBuildPage"
+             x:DataType="vm:OpenBuildPageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar">
+      <WrapPanel Margin="28,14,28,14">
+        <Button Content="Back" Command="{Binding BackCommand}" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="16" MaxWidth="920" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Open a build" Classes="h1" TextWrapping="Wrap" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="A build that is not in a game's list: one someone shared with you, or a patch folder or downloaded build you already have." />
+        </StackPanel>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                <TextBlock Text="A shared build" Classes="h3" />
+                <TextBlock Classes="muted small" TextWrapping="Wrap"
+                           Text="Paste what someone sent you, or open the file. Everything comes from Steam, so the game has to be owned by the account you sign in with." />
+              </StackPanel>
+              <Button Grid.Column="1" Content="Open a file…" Command="{Binding OpenFileCommand}" VerticalAlignment="Center" />
+            </Grid>
+            <TextBox Text="{Binding Text}" AcceptsReturn="True" TextWrapping="NoWrap" Classes="mono" MinHeight="120" MaxHeight="300"
+                     Watermark="COD Downgrader shared build" />
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasSummary}">
+              <StackPanel Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Details}" Classes="muted small" TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="accent" Content="Choose this build" Command="{Binding ContinueCommand}" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="error" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                <TextBlock Text="A patch folder or downloaded build" Classes="h3" />
+                <TextBlock Classes="muted small" TextWrapping="Wrap"
+                           Text="A folder COD Downgrader saved a patch into, or downloaded a whole build into. Put it into its game, or share it." />
+              </StackPanel>
+              <Button Grid.Column="1" Content="Choose a folder…" Command="{Binding ChooseFolderCommand}" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="{Binding Folder}" IsVisible="{Binding HasFolder}" Classes="muted small" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding Reading}">
+              <ProgressBar IsIndeterminate="True" Width="120" VerticalAlignment="Center" />
+              <TextBlock Text="Reading the folder" Classes="muted small" VerticalAlignment="Center" />
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding FolderBuilds}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FolderBuild">
+                  <StackPanel>
+                    <Border Classes="divider" />
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Details}" Classes="muted small" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Classes="accent" Content="Put it into the game" Command="{Binding ApplyCommand}" IsVisible="{Binding CanApply}" />
+                        <Button Content="Share it" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" />
+                      </StackPanel>
+                    </Grid>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding FolderError}" IsVisible="{Binding HasFolderError}" Classes="error" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

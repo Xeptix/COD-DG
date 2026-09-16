@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Everything but the window: Steam, the builds, downloading, patching, the menus and the command line. -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CODDowngrader.Core</AssemblyName>
+    <RootNamespace>CODDowngrader</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.57.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Catalog\manifests.txt" LogicalName="manifests.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CODDowngrader.Tests" />
+    <InternalsVisibleTo Include="CODDowngrader" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,80 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+        x:Class="CODDowngrader.Gui.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{Binding Title}"
+        Width="1100" Height="740" MinWidth="820" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Icon="avares://CODDowngrader/Assets/icon.ico">
+
+  <Grid ColumnDefinitions="300,*">
+    <Border Grid.Column="0" Classes="sidebar">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Margin="22,24,22,12" Spacing="3">
+          <TextBlock Text="COD Downgrader" Classes="h2" />
+          <TextBlock Text="Any build of a Call of Duty you own on Steam" Classes="muted small" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Bottom" Margin="18,10,18,18" Spacing="8">
+          <TextBlock Text="{Binding RememberNote}" IsVisible="{Binding HasRememberNote}" Classes="warn small" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Account}" Classes="muted small" TextWrapping="Wrap" />
+          <Button Content="Your builds" Command="{Binding BuildsCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+          <Button Content="Open a build" Command="{Binding OpenBuildCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+          <Button Content="Settings" Command="{Binding SettingsCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+          <TextBlock Text="{Binding Version}" Classes="muted small" />
+        </StackPanel>
+
+        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource StrokeBrush}" Margin="0,0,0,0" />
+        <TextBox DockPanel.Dock="Top" Text="{Binding Filter}" Watermark="Find a game" Margin="16,12,16,8" />
+        <ScrollViewer>
+          <StackPanel Margin="10,6,10,10">
+            <TextBlock Text="No game matches that." IsVisible="{Binding NothingMatches}" Classes="muted small" Margin="12,10,0,0" />
+            <TextBlock Text="INSTALLED" Classes="section" IsVisible="{Binding HasInstalled}" />
+            <ListBox Classes="list" ItemsSource="{Binding Installed}" SelectedItem="{Binding SelectedInstalled}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:GameItem">
+                  <Grid ColumnDefinitions="Auto,*" Margin="0,3">
+                    <Panel Width="28" Height="28" Margin="0,2,10,0" VerticalAlignment="Top">
+                      <Image Source="{Binding Icon}" IsVisible="{Binding HasIcon}" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                      <Border IsVisible="{Binding !HasIcon}" CornerRadius="6" Background="{DynamicResource StrokeBrush}" />
+                    </Panel>
+                    <StackPanel Grid.Column="1" Spacing="1">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" Classes="muted small" TextWrapping="Wrap" />
+                      <Border Classes="badge" IsVisible="{Binding HasBadge}" HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding Badge}" Classes="small" />
+                      </Border>
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Text="NOT INSTALLED" Classes="section" Margin="12,18,0,4" IsVisible="{Binding HasOthers}" />
+            <ListBox Classes="list" ItemsSource="{Binding Others}" SelectedItem="{Binding SelectedOther}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:GameItem">
+                  <StackPanel Spacing="1" Margin="0,2">
+                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Subtitle}" IsVisible="{Binding HasSubtitle}" Classes="muted small" TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <Border Grid.Column="1" Classes="page">
+      <Grid>
+        <ContentControl Content="{Binding Page}" />
+        <StackPanel IsVisible="{Binding Loading}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+          <ProgressBar IsIndeterminate="True" Width="220" />
+          <TextBlock Text="Reading Steam" HorizontalAlignment="Center" Classes="muted" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

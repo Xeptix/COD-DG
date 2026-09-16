@@ -3,13 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{03B4F9D5-2610-46B5-AABF-8BA8D134E5A0}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CODDowngrader", "src\CODDowngrader\CODDowngrader.csproj", "{7FD8FEF4-5EFD-434C-9967-615996D0E950}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{967ABB25-C21A-4223-8EF3-50FEFE94099F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CODDowngrader.Tests", "tests\CODDowngrader.Tests\CODDowngrader.Tests.csproj", "{DBBE34D8-9623-420D-A6D5-26BA9035E545}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{75071652-7415-4569-9392-39B09F0D5E6C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CODDowngrader.Core", "src\CODDowngrader.Core\CODDowngrader.Core.csproj", "{847AAD4A-4B80-4CD6-8429-7B02EA1E3566}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CODDowngrader", "src\CODDowngrader\CODDowngrader.csproj", "{AF089858-25F8-485C-ABBB-480C17D6F187}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CODDowngrader.Stub", "src\CODDowngrader.Stub\CODDowngrader.Stub.csproj", "{0A91F6A2-775B-4688-8034-2E9739C97CE9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,17 +24,27 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7FD8FEF4-5EFD-434C-9967-615996D0E950}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7FD8FEF4-5EFD-434C-9967-615996D0E950}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7FD8FEF4-5EFD-434C-9967-615996D0E950}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7FD8FEF4-5EFD-434C-9967-615996D0E950}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DBBE34D8-9623-420D-A6D5-26BA9035E545}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DBBE34D8-9623-420D-A6D5-26BA9035E545}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DBBE34D8-9623-420D-A6D5-26BA9035E545}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DBBE34D8-9623-420D-A6D5-26BA9035E545}.Release|Any CPU.Build.0 = Release|Any CPU
+		{847AAD4A-4B80-4CD6-8429-7B02EA1E3566}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{847AAD4A-4B80-4CD6-8429-7B02EA1E3566}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{847AAD4A-4B80-4CD6-8429-7B02EA1E3566}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{847AAD4A-4B80-4CD6-8429-7B02EA1E3566}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF089858-25F8-485C-ABBB-480C17D6F187}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF089858-25F8-485C-ABBB-480C17D6F187}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF089858-25F8-485C-ABBB-480C17D6F187}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF089858-25F8-485C-ABBB-480C17D6F187}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A91F6A2-775B-4688-8034-2E9739C97CE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A91F6A2-775B-4688-8034-2E9739C97CE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A91F6A2-775B-4688-8034-2E9739C97CE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A91F6A2-775B-4688-8034-2E9739C97CE9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{7FD8FEF4-5EFD-434C-9967-615996D0E950} = {03B4F9D5-2610-46B5-AABF-8BA8D134E5A0}
 		{DBBE34D8-9623-420D-A6D5-26BA9035E545} = {967ABB25-C21A-4223-8EF3-50FEFE94099F}
+		{847AAD4A-4B80-4CD6-8429-7B02EA1E3566} = {75071652-7415-4569-9392-39B09F0D5E6C}
+		{AF089858-25F8-485C-ABBB-480C17D6F187} = {75071652-7415-4569-9392-39B09F0D5E6C}
+		{0A91F6A2-775B-4688-8034-2E9739C97CE9} = {75071652-7415-4569-9392-39B09F0D5E6C}
 	EndGlobalSection
 EndGlobal

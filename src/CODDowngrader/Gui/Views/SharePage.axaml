@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.SharePage"
+             x:DataType="vm:SharePageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar">
+      <WrapPanel Margin="28,14,28,14">
+        <Button Classes="accent" Content="Copy" Command="{Binding CopyCommand}" MinWidth="110" Margin="0,0,10,0" />
+        <Button Content="Save as a file…" Command="{Binding SaveCommand}" Margin="0,0,10,0" />
+        <Button Content="Back" Command="{Binding BackCommand}" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="16" MaxWidth="920" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Share this build" Classes="h1" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Subtitle}" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Classes="card">
+          <StackPanel Spacing="6">
+            <TextBlock Text="How it works" Classes="h3" />
+            <TextBlock TextWrapping="Wrap" Text="Send this to anyone who owns the game on Steam. In COD Downgrader they choose Open a shared build and paste it, or open the file, and the same build comes down from Steam to their own account." />
+            <TextBlock TextWrapping="Wrap" Text="{Binding Holds}" />
+            <TextBlock TextWrapping="Wrap" Classes="muted" Text="It holds no game files, only which build and which files, so it is a few lines long." />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBox Text="{Binding Text}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" Classes="mono" MaxHeight="340" />
+            <TextBlock Text="{Binding Status}" IsVisible="{Binding HasStatus}" Classes="ok" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.RunPage"
+             x:DataType="vm:RunPageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar">
+      <WrapPanel Margin="28,14,28,14">
+        <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding Running}" Margin="0,0,10,0" />
+        <Button Classes="accent" Content="Done" Command="{Binding DoneCommand}" IsVisible="{Binding Succeeded}" MinWidth="110" Margin="0,0,10,0" />
+        <Button Content="Share" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" Margin="0,0,10,0" />
+        <Button Classes="accent" Content="Go ahead anyway" Command="{Binding OverrideCommand}" IsVisible="{Binding CanOverride}" Margin="0,0,10,0" />
+        <Button Content="Try again" Command="{Binding RetryCommand}" IsVisible="{Binding Failed}" Margin="0,0,10,0" />
+        <Button Content="Back" Command="{Binding BackCommand}" IsVisible="{Binding Failed}" Margin="0,0,10,0" />
+        <Button Content="{Binding OpenFolderLabel}" Command="{Binding OpenFolderCommand}" IsVisible="{Binding HasFolder}" Margin="0,0,10,0" />
+        <Button Content="Open the logs" Command="{Binding LogsCommand}" IsVisible="{Binding Failed}" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="16" MaxWidth="920" HorizontalAlignment="Stretch">
+        <TextBlock Text="{Binding Title}" Classes="h1" TextWrapping="Wrap" />
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <TextBlock Text="{Binding Stage}" Classes="h3" />
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Fraction}" IsIndeterminate="{Binding Indeterminate}" Height="6" IsVisible="{Binding Running}" />
+            <TextBlock Text="{Binding Detail}" IsVisible="{Binding HasDetail}" Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes.error="{Binding Failed}" Classes.ok="{Binding Succeeded}" />
+          </StackPanel>
+        </Border>
+
+        <Button Content="{Binding LogToggleLabel}" Command="{Binding ToggleLogCommand}" HorizontalAlignment="Left" />
+        <Border Classes="log" IsVisible="{Binding ShowLog}">
+          <ItemsControl ItemsSource="{Binding LogLines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="mono" TextWrapping="Wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

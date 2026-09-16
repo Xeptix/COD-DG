@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "xmuFycJRoSs=",
+  "success": true,
+  "projectFilePath": "D:\\Projects\\COD Downgrader\\src\\CODDowngrader.Core\\CODDowngrader.Core.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\xepti\\.nuget\\packages\\spectre.console\\0.57.2\\spectre.console.0.57.2.nupkg.sha512",
+    "C:\\Users\\xepti\\.nuget\\packages\\spectre.console.ansi\\0.57.2\\spectre.console.ansi.0.57.2.nupkg.sha512"
+  ],
+  "logs": []
+}

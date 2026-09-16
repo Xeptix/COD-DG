@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    CODDowngrader.com: the console face of the window program beside it, Windows only. Shells wait for a console program and
+    not for a window one. Published with NativeAOT, which links with Visual Studio's C++ tools; tools/build.py renames the
+    output from .exe to .com.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CODDowngrader</AssemblyName>
+    <RootNamespace>CODDowngrader.Stub</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <StackTraceSupport>false</StackTraceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <ApplicationIcon>..\CODDowngrader\Assets\icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+</Project>

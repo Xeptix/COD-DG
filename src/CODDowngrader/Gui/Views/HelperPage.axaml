@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             x:Class="CODDowngrader.Gui.Views.HelperPage"
+             x:DataType="vm:HelperPageViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="actionbar">
+      <WrapPanel Margin="28,14,28,14">
+        <Button Classes="accent" Content="Continue" Command="{Binding ContinueCommand}" MinWidth="110" Margin="0,0,10,0" />
+        <Button Content="Back" Command="{Binding BackCommand}" Margin="0,0,10,0" />
+        <Button Content="Copy all links" Command="{Binding CopyAllCommand}" />
+      </WrapPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Margin="28,26,28,26" Spacing="14" MaxWidth="980" HorizontalAlignment="Stretch">
+        <TextBlock Text="{Binding Title}" Classes="h1" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
+
+        <Border Classes="card">
+          <StackPanel Spacing="4">
+            <TextBlock Text="How" Classes="h3" />
+            <TextBlock TextWrapping="Wrap" Text="1. Open a depot's page on SteamDB with its button below." />
+            <TextBlock TextWrapping="Wrap" Text="2. Select the rows of its manifests table, or just the manifest ID you want, and copy them." />
+            <TextBlock TextWrapping="Wrap" Text="3. Paste into that depot's box. COD Downgrader takes the manifest you need from what you paste, and remembers it for next time." />
+          </StackPanel>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:NeedRow">
+              <Border Classes="card" Margin="0,0,0,10">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                  <StackPanel Spacing="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="muted small">
+                      <Run Text="Depot " />
+                      <Run Text="{Binding Depot}" />
+                    </TextBlock>
+                  </StackPanel>
+                  <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                    <Button Content="Open on SteamDB" Margin="8,0,0,0"
+                            Command="{Binding $parent[ItemsControl].((vm:HelperPageViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}" />
+                    <Button Content="Copy link" Margin="8,0,0,0"
+                            Command="{Binding $parent[ItemsControl].((vm:HelperPageViewModel)DataContext).CopyCommand}" CommandParameter="{Binding}" />
+                  </WrapPanel>
+                  <TextBox Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Text}" AcceptsReturn="True" TextWrapping="NoWrap"
+                           Height="76" Margin="0,10,0,0" Watermark="Paste the manifest rows, or a manifest ID" Classes="mono" />
+                  <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Status}" Classes="small" Margin="0,6,0,0" TextWrapping="Wrap"
+                             Classes.error="{Binding IsWrong}" Classes.ok="{Binding IsResolved}" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>
