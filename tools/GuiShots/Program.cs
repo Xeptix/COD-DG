@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using CODDowngrader.App;
 using CODDowngrader.Catalog;
 using CODDowngrader.Gui;
@@ -24,7 +25,8 @@ AppBuilder.Configure<GuiApp>()
     .SetupWithoutStarting();
 
 var window = new MainWindow { Width = 1100, Height = 760 };
-var model = new MainViewModel(new Options(), new NoPlatform());
+var platform = new NoPlatform();
+var model = new MainViewModel(new Options(), platform);
 window.DataContext = model;
 window.Show();
 
@@ -73,6 +75,38 @@ var download = new ActionPageViewModel(model, game, "download", older);
 model.Show(download);
 Pump(() => !download.IsPlanning, 120_000);
 Shot("3b-download");
+
+// The language list, open, then German: its depots before this build's update are not in Steam's product info.
+if (download.HasLanguages)
+{
+    var languageBox = window.GetVisualDescendants().OfType<Avalonia.Controls.ComboBox>().FirstOrDefault(c => c.ItemsSource == download.Languages);
+    if (languageBox is not null)
+    {
+        languageBox.IsDropDownOpen = true;
+        Shot("3e-download-languages");
+        languageBox.IsDropDownOpen = false;
+    }
+    download.Language = download.Languages.FirstOrDefault(l => l.Code == "german") ?? download.Languages[^1];
+    Pump(() => !download.IsPlanning, 120_000);
+    Shot("3f-download-german");
+    // The oldest build, where German depots do need SteamDB, when this one did not.
+    if (!download.NeedsManifests && game.Builds.LastOrDefault() is { } oldest && oldest != older)
+    {
+        model.Back();
+        download = new ActionPageViewModel(model, game, "download", oldest);
+        model.Show(download);
+        download.Language = download.Languages.FirstOrDefault(l => l.Code == "german") ?? download.Languages[^1];
+        Pump(() => !download.IsPlanning, 120_000);
+        Shot("3f-download-german-needs");
+    }
+    if (download.NeedsManifests)
+    {
+        download.FindManifestsCommand.Execute(null);
+        Pump(() => model.Page is HelperPageViewModel);
+        Shot("3g-download-german-helper");
+        model.Back();
+    }
+}
 model.Back();
 
 var patchPage = new ActionPageViewModel(model, game, "patch", older);
@@ -227,6 +261,23 @@ var buildsPage = new BuildsPageViewModel(model, listPath);
 model.Show(buildsPage);
 Pump(() => !buildsPage.Loading);
 Shot("15-your-builds");
+
+// Find builds in a folder: a download made before the list existed, in a folder of its own under the one chosen. The list is the
+// shot's own, so for this one search it is kept.
+var foundRoot = Path.Combine(folder, "found builds");
+var foundFolder = Path.Combine(foundRoot, "an older download");
+Directory.CreateDirectory(foundFolder);
+var foundRecord = new CODDowngrader.App.DownloadRecord();
+var foundPart = new CODDowngrader.App.DownloadPart { AppId = appId, Game = game.Name, Build = older.Title + ", in German", Language = "german", Complete = true, Finished = DateTimeOffset.Now.AddDays(-9) };
+foundPart.SetManifests(older.Build!.Manifests);
+foundRecord.Downloads.Add(foundPart);
+CODDowngrader.App.AppState.SaveRecord(foundFolder, foundRecord);
+platform.NextFolder = foundRoot;
+Remembered.Writing = true;
+buildsPage.FindCommand.Execute(null);
+Pump(() => buildsPage.SearchResult is not null && !buildsPage.Searching && !buildsPage.Loading);
+Remembered.Writing = false;
+Shot("15b-your-builds-found");
 model.Back();
 
 // Undo's confirmation, from a plan written for the shot: nothing is written into a game on this PC to undo for real.
@@ -302,7 +353,15 @@ void Shot(string name)
 
 sealed class NoPlatform : IPlatform
 {
-    public Task<string?> PickFolderAsync(string title, string? start) => Task.FromResult<string?>(null);
+    /// <summary>What the next folder picker answers, once.</summary>
+    public string? NextFolder { get; set; }
+
+    public Task<string?> PickFolderAsync(string title, string? start)
+    {
+        var folder = NextFolder;
+        NextFolder = null;
+        return Task.FromResult(folder);
+    }
     public Task<string?> PickFileAsync(string title) => Task.FromResult<string?>(null);
     public Task<string?> SaveFileAsync(string title, string suggestedName) => Task.FromResult<string?>(null);
     public Task CopyAsync(string text) => Task.CompletedTask;

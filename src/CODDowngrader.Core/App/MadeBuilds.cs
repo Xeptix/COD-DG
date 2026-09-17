@@ -105,6 +105,97 @@ public static class MadeBuilds
         }
     }
 
+    /// <summary>How many folders deep a search goes below the folder it starts in.</summary>
+    const int SearchDepth = 4;
+
+    /// <summary>
+    /// The finished downloads and patch folders in a folder and the folders under it, as the list would have them: each one's own
+    /// record says what it is. A folder holding a build is not searched further, since the rest of it is game files.
+    /// </summary>
+    public static List<MadeBuild> Find(string root, GameLibrary? library = null, CancellationToken cancel = default, Action<string>? looking = null)
+    {
+        var found = new List<MadeBuild>();
+        var pending = new Stack<(string Folder, int Depth)>();
+        pending.Push((root, 0));
+        while (pending.Count > 0)
+        {
+            cancel.ThrowIfCancellationRequested();
+            var (folder, depth) = pending.Pop();
+            looking?.Invoke(folder);
+
+            var builds = InFolder(folder, library);
+            if (builds.Count > 0 || File.Exists(Path.Combine(folder, PatchRecord.FileName)) || File.Exists(Path.Combine(folder, AppState.RecordFileName)))
+            {
+                found.AddRange(builds);
+                continue;
+            }
+            if (depth >= SearchDepth) continue;
+
+            string[] children;
+            try
+            {
+                children = Directory.GetDirectories(folder);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                continue;
+            }
+            foreach (var child in children.OrderByDescending(c => c, StringComparer.OrdinalIgnoreCase))
+            {
+                var name = Path.GetFileName(child);
+                if (name.StartsWith('.') || name.Equals("steamapps", StringComparison.OrdinalIgnoreCase) || name.Equals("$RECYCLE.BIN", StringComparison.OrdinalIgnoreCase)) continue;
+                pending.Push((child, depth + 1));
+            }
+        }
+        return found;
+    }
+
+    /// <summary>The finished builds one folder holds by its records: a patch, or the downloads in it.</summary>
+    static List<MadeBuild> InFolder(string folder, GameLibrary? library)
+    {
+        GameEntry GameOf(uint appId, string name) =>
+            library?.Entries.FirstOrDefault(e => e.AppId == appId) ?? new GameEntry { AppId = appId, Name = name, Owners = new Dictionary<uint, uint>() };
+
+        var builds = new List<MadeBuild>();
+        if (PatchStore.LoadPatch(folder) is { Complete: true } patch && patch.AppIds.Count > 0)
+        {
+            var known = patch.AppIds.Where(id => library?.Entries.Any(e => e.AppId == id) == true).ToList();
+            builds.Add(FromPatch(patch, GameOf(known.Count > 0 ? known[0] : patch.AppIds[0], patch.Game), folder));
+            return builds;
+        }
+        if (AppState.LoadRecord(folder, out _) is { } record)
+            foreach (var part in record.Downloads.Where(d => d.Complete))
+                builds.Add(FromDownload(part, GameOf(part.AppId, part.Game), folder));
+        return builds;
+    }
+
+    /// <summary>
+    /// Puts builds found in folders on the list, leaving out any it has already: the same kind of build of the same game in the
+    /// same folder. How many were new; none are kept when this run remembers nothing new.
+    /// </summary>
+    public static int AddFound(IEnumerable<MadeBuild> found, string? path = null, bool? writing = null)
+    {
+        path ??= DefaultPath;
+        lock (Gate)
+        {
+            var builds = Read(path);
+            var added = 0;
+            foreach (var build in found)
+            {
+                if (builds.Any(b => b.Kind == build.Kind && b.AppId == build.AppId
+                                    && PathRules.Comparer.Equals(PathRules.Normalize(b.Folder), PathRules.Normalize(build.Folder)))) continue;
+                builds.Add(build);
+                added++;
+            }
+            if (added > 0 && (writing ?? Remembered.Writing))
+            {
+                builds.Sort((a, b) => a.Made.CompareTo(b.Made));
+                Write(path, builds);
+            }
+            return added;
+        }
+    }
+
     /// <summary>Takes a build off the list. Nothing it made is touched.</summary>
     public static void Remove(MadeBuild build, string? path = null)
     {

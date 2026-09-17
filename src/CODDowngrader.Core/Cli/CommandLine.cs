@@ -58,7 +58,7 @@ public static class CommandLine
     static readonly HashSet<string> TakesValue = new(StringComparer.OrdinalIgnoreCase)
     {
         "steam", "depotdownloader", "game", "build", "at", "manifest", "from", "to", "only", "files", "exe", "backup",
-        "login", "username", "app", "depot", "out", "part", "result", "shared",
+        "login", "username", "app", "depot", "out", "part", "result", "shared", "language", "find",
     };
 
     /// <summary>Null when <paramref name="args"/> names no command; <paramref name="error"/> says what was wrong when it is set.</summary>
@@ -126,6 +126,7 @@ public static class CommandLine
         "no-colour" => "no-color",
         "dir" or "folder" => "to",
         "account" => "username",
+        "lang" => "language",
         _ => option.ToLowerInvariant(),
     };
 
@@ -141,7 +142,8 @@ public static class CommandLine
           undo <game>               Take a build back out of the installed game, from the backup, and
                                     from Steam for any file the backup does not hold
           history [<game>]          Every download, downgrade and patch folder made on this PC, and
-                                    where each is now
+                                    where each is now. --find <folder> first adds the downloads and
+                                    patch folders in that folder and the folders under it
           share <game>              A build as text to hand to someone who owns the game: the one
                                     --build, --at or --manifest names, a patch folder or downloaded
                                     build with --from, or else the downgrade written into the game
@@ -179,6 +181,10 @@ public static class CommandLine
         Options:
           --to <folder>             Where a download, a patch, an export or a shared build goes
           --from <build|folder>     patch: the build it starts from. apply: the folder to take
+          --language <language>     download, builds: the build in another language Steam has for
+                                    the game, by Steam's name for it: english, french, german,
+                                    spanish, italian, russian, polish, japanese, brazilian, schinese...
+                                    builds --json lists each game's
           --only <what>             all (default), content (keep your exes and DLLs), or binaries
           --files <name,name>       Only these files of the build, instead of --only
           --exe <steam|installed>   Which copy of an exe Steam personalizes for your account

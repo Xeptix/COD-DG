@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             xmlns:gui="using:CODDowngrader.Gui"
              x:Class="CODDowngrader.Gui.Views.ActionPage"
              x:DataType="vm:ActionPageViewModel">
   <DockPanel>
@@ -17,6 +18,26 @@
           <TextBlock Text="{Binding Title}" Classes="h1" TextWrapping="Wrap" />
           <TextBlock Text="{Binding Subtitle}" Classes="muted" TextWrapping="Wrap" />
         </StackPanel>
+
+        <Border Classes="card" IsVisible="{Binding HasLanguages}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Language" Classes="h3" />
+            <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding Language}" MinWidth="320">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="gui:LanguageChoice">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Border Width="24" Height="16" CornerRadius="2" ClipToBounds="True" VerticalAlignment="Center" IsVisible="{Binding HasFlag}">
+                      <Image Source="{Binding Flag}" Stretch="UniformToFill" />
+                    </Border>
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Note}" Classes="muted small" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="The game's text and speech in the build are in this language." Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
 
         <Border Classes="card" IsVisible="{Binding IsApply}">
           <StackPanel Spacing="8">
@@ -103,7 +124,10 @@
             <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Classes="warn" TextWrapping="Wrap" />
             <StackPanel IsVisible="{Binding HasError}" Spacing="8">
               <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap" />
-              <Button Content="Try again" Command="{Binding RetryCommand}" />
+              <WrapPanel>
+                <Button Classes="accent" Content="Get them from SteamDB" Command="{Binding FindManifestsCommand}" IsVisible="{Binding NeedsManifests}" Margin="0,0,10,0" />
+                <Button Content="Try again" Command="{Binding RetryCommand}" />
+              </WrapPanel>
             </StackPanel>
           </StackPanel>
         </Border>

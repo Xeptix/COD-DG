@@ -6,6 +6,8 @@
   <DockPanel>
     <Border DockPanel.Dock="Bottom" Classes="actionbar">
       <WrapPanel Margin="28,14,28,14">
+        <Button Content="Find builds in a folder…" Command="{Binding FindCommand}" Margin="0,0,10,0"
+                ToolTip.Tip="Downloads and patch folders COD Downgrader made, in a folder you choose and the folders under it. Nothing in them changes." />
         <Button Content="Back" Command="{Binding BackCommand}" />
       </WrapPanel>
     </Border>
@@ -18,11 +20,18 @@
                      Text="Every downgrade, download and patch folder made on this PC, newest first. Share one with someone who owns the game, or find where it went." />
         </StackPanel>
 
+        <Border Classes="card" IsVisible="{Binding HasSearchResult}">
+          <StackPanel Spacing="8">
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding Searching}" Width="220" HorizontalAlignment="Left" />
+            <TextBlock Text="{Binding SearchResult}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
         <ProgressBar IsIndeterminate="True" IsVisible="{Binding Loading}" Width="220" HorizontalAlignment="Left" />
 
         <Border Classes="card" IsVisible="{Binding IsEmpty}">
           <TextBlock TextWrapping="Wrap"
-                     Text="Nothing yet. Each build you put into a game, download into a folder of its own, or save as a patch folder shows here once it has finished." />
+                     Text="Nothing yet. Each build you put into a game, download into a folder of its own, or save as a patch folder shows here once it has finished. Builds made before, or on another PC, join the list with Find builds in a folder." />
         </Border>
 
         <ItemsControl ItemsSource="{Binding Builds}">

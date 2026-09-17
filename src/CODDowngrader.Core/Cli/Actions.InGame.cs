@@ -296,6 +296,10 @@ public static partial class Actions
         }
         else if (AppState.LoadRecord(folder, out _)?.For(game.AppId) is { Complete: true } downloaded)
         {
+            // A download in a language the game is not installed in holds depots Steam does not know this install by.
+            if (downloaded.Language is { } language && !string.Equals(language, library.LanguageOf(game), StringComparison.OrdinalIgnoreCase))
+                return run.Fail(ExitCode.Usage, "other-language",
+                    $"That folder holds {game.Name} in {SteamLanguages.Name(language)}, and the installed game is in {SteamLanguages.Name(library.LanguageOf(game) ?? SteamLanguages.English)}. Change the game's language in Steam first, or play it from the folder.");
             target = downloaded.ManifestMap();
             owners = game.Owners;
             build = downloaded.Build;

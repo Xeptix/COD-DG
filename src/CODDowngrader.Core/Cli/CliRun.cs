@@ -74,6 +74,7 @@ public sealed class CliRun : Job
         // apply takes its folder as the argument after the game as well.
         From = command.Value("from") ?? (command.Name.Equals("apply", StringComparison.OrdinalIgnoreCase) ? command.Arguments.Skip(1).FirstOrDefault() : null),
         Only = command.Value("only") ?? command.Value("part"),
+        Language = command.Value("language"),
         Files = command.Value("files"),
         Exe = command.Value("exe"),
         Backup = command.Value("backup"),

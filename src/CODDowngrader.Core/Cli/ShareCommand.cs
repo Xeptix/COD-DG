@@ -141,6 +141,7 @@ public static class ShareCommand
             Only = choosesPart ? run.Settings.Only : target.Settings.Only,
             Files = choosesPart ? run.Settings.Files : target.Settings.Files,
             Siblings = run.Settings.Siblings || target.Settings.Siblings,
+            Language = target.Settings.Language,
         });
         return game;
     }

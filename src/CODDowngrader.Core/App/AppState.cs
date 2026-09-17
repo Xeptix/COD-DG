@@ -32,6 +32,10 @@ public sealed class DownloadPart
     public uint AppId { get; set; }
     public string Game { get; set; } = "";
     public string Build { get; set; } = "";
+
+    /// <summary>The language chosen for the download, as Steam's code names it; null for the languages the game had on this PC.</summary>
+    public string? Language { get; set; }
+
     public bool Complete { get; set; }
     public DateTimeOffset Started { get; set; }
     public DateTimeOffset? Finished { get; set; }

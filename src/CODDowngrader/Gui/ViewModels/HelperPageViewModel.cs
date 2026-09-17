@@ -77,12 +77,15 @@ public sealed class NeedRow : Observable
 public sealed class HelperPageViewModel : Observable, IHasBack
 {
     readonly MainViewModel _main;
-    readonly GamePageViewModel _page;
+    readonly GamePageViewModel? _page;
     readonly GameLibrary _library;
     readonly GameEntry _game;
     readonly DateTime? _date;
 
-    HelperPageViewModel(MainViewModel main, GamePageViewModel page, GameLibrary library, GameEntry game, DateTime? date, string title, string explanation)
+    /// <summary>Where the manifests go when the page that opened the helper takes them itself, instead of a build on the game page.</summary>
+    Action<IReadOnlyList<string>>? _done;
+
+    HelperPageViewModel(MainViewModel main, GamePageViewModel? page, GameLibrary library, GameEntry game, DateTime? date, string title, string explanation)
     {
         _main = main;
         _page = page;
@@ -118,6 +121,19 @@ public sealed class HelperPageViewModel : Observable, IHasBack
         return helper;
     }
 
+    /// <summary>
+    /// The depots a build needs from SteamDB, each one's manifest being the newest first seen before <paramref name="before"/>;
+    /// <paramref name="done"/> takes them as "depot=manifest" once every one is there.
+    /// </summary>
+    public static HelperPageViewModel ForBuild(MainViewModel main, GameLibrary library, GameEntry game, string title, string explanation,
+        IReadOnlyList<NeededManifest> needs, DateTimeOffset? before, Action<IReadOnlyList<string>> done)
+    {
+        var helper = new HelperPageViewModel(main, null, library, game, (before ?? DateTimeOffset.Now).LocalDateTime, title, explanation) { _done = done };
+        foreach (var need in needs)
+            helper.Rows.Add(new NeedRow(need.Depot, library.DepotName(game, need.Depot), before, optional: false, helper.Changed));
+        return helper;
+    }
+
     public string Title { get; }
     public string Explanation { get; }
     public ObservableCollection<NeedRow> Rows { get; } = new();
@@ -141,6 +157,13 @@ public sealed class HelperPageViewModel : Observable, IHasBack
             .Concat(r.Chosen is { FirstSeen: null } bare ? new[] { new RememberedManifest(r.Depot, bare.Manifest, RememberedSource.Named) } : Array.Empty<RememberedManifest>())));
 
         var manifests = Rows.Where(r => r.Chosen is not null).Select(r => $"{r.Depot}={r.Chosen!.Manifest}").ToList();
+        if (_done is { } done)
+        {
+            _main.Back();
+            done(manifests);
+            return;
+        }
+        if (_page is null) return;
         BuildItem item;
         if (_date is { } date)
         {

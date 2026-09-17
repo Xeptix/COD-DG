@@ -29,6 +29,15 @@ public sealed class GameEntry
 
     public IReadOnlyList<uint> DepotIds => Owners.Keys.OrderBy(d => d).ToList();
 
+    /// <summary>The game as Steam has it, when this entry is that game in another language (<see cref="GameLibrary.ForLanguage"/>).</summary>
+    public GameEntry? InLanguageOf { get; init; }
+
+    /// <summary>The language chosen for this entry, when it is <see cref="InLanguageOf"/> another.</summary>
+    public string? Language { get; init; }
+
+    /// <summary>Each language depot this entry takes instead of the game's own: the depot taken, to the depot it stands in for.</summary>
+    public IReadOnlyDictionary<uint, uint> LanguageSwaps { get; init; } = new Dictionary<uint, uint>();
+
     public bool Downgradable => Title?.Downgradable ?? true;
 
     public uint OwnerOf(uint depot) => Owners.TryGetValue(depot, out var owner) ? owner : AppId;
@@ -255,6 +264,8 @@ public sealed class GameLibrary
 
     public BuildHistoryResult History(GameEntry game)
     {
+        if (game.InLanguageOf is { } steamHas) return Remembered.Known(InLanguage(game, History(steamHas)));
+
         var depots = new HashSet<uint>(game.Owners.Keys);
         return Remembered.Known(BuildHistory.Reconstruct(Remembered.Into(new BuildInput
         {
@@ -266,6 +277,157 @@ public sealed class GameLibrary
             Listed = List.Depots,
             ListedUpdatesFrom = List.HistoryFrom,
         })));
+    }
+
+    /// <summary>
+    /// The builds of a game in another language: the builds of the game as Steam has it, each with the chosen language's depots
+    /// instead of its own, so they keep their names and dates. Product info names those depots' manifests for the build Steam
+    /// publishes today and no other. A language depot keeps today's manifest in a build where the depot it stands in for has
+    /// today's manifest as well, since Steam updates a game's languages together; in any other build it is unknown, and comes
+    /// from SteamDB.
+    /// </summary>
+    internal static BuildHistoryResult InLanguage(GameEntry game, BuildHistoryResult steamHas)
+    {
+        var replaced = game.LanguageSwaps.Values.ToHashSet();
+        var published = game.InLanguageOf!.LatestManifests;
+        var builds = steamHas.Builds.Select(build =>
+        {
+            var manifests = build.Manifests.Where(m => !replaced.Contains(m.Key)).ToDictionary(m => m.Key, m => m.Value);
+            var unknown = build.Unknown.Where(d => !replaced.Contains(d)).ToList();
+            foreach (var (depot, standsFor) in game.LanguageSwaps)
+            {
+                var unchanged = build.Manifests.TryGetValue(standsFor, out var had) && published?.GetValueOrDefault(standsFor) == had;
+                if (unchanged && game.LatestManifests?.GetValueOrDefault(depot) is { } latest and not 0) manifests[depot] = latest;
+                else unknown.Add(depot);
+            }
+            return build with
+            {
+                Manifests = manifests,
+                Unknown = unknown.OrderBy(d => d).ToList(),
+                DifferentFromInstalled = build.DifferentFromInstalled.Where(d => !replaced.Contains(d)).ToList(),
+            };
+        }).ToList();
+
+        var depots = steamHas.Depots.Where(d => !replaced.Contains(d.Key)).ToDictionary(d => d.Key, d => d.Value);
+        foreach (var depot in game.LanguageSwaps.Keys)
+            depots[depot] = game.LatestManifests?.GetValueOrDefault(depot) is { } latest and not 0
+                ? new[] { new KnownManifest(depot, latest, null, null, false, true) }
+                : Array.Empty<KnownManifest>();
+        return new BuildHistoryResult(builds, depots);
+    }
+
+    /// <summary>
+    /// A game's language depots in groups of the same content: in product info each group is an English depot followed by the
+    /// other languages of it, and a depot with no language ends one. Low-violence and not-default depots are left out, and
+    /// only the first depot of a language in a group counts (Black Ops lists German twice).
+    /// </summary>
+    List<List<(uint Depot, string Language, uint Owner)>> LanguageGroups(GameEntry game) => LanguageGroups(game.AppId, game.Info, List.NotDefault);
+
+    internal static List<List<(uint Depot, string Language, uint Owner)>> LanguageGroups(uint appId, AppInfo? info, IReadOnlySet<uint> notDefault)
+    {
+        var groups = new List<List<(uint Depot, string Language, uint Owner)>>();
+        if (info is null) return groups;
+
+        List<(uint Depot, string Language, uint Owner)>? group = null;
+        foreach (var d in info.Depots)
+        {
+            if (!d.ForWindows || d.IsRedistributable) continue;
+            if (string.IsNullOrEmpty(d.Language))
+            {
+                group = null;
+                continue;
+            }
+            var language = d.Language.ToLowerInvariant();
+            if (group is null || language == SteamLanguages.English) groups.Add(group = new());
+            if (d.LowViolence || notDefault.Contains(d.DepotId) || (!d.IsBorrowed && d.PublicManifest is null)) continue;
+            if (group.Any(m => m.Language == language)) continue;
+            group.Add((d.DepotId, language, d.IsBorrowed ? d.DepotFromApp!.Value : appId));
+        }
+        groups.RemoveAll(g => g.Count == 0);
+        return groups;
+    }
+
+    /// <summary>The languages a download of this game can be in, English first. Empty for a game with no language depots.</summary>
+    public IReadOnlyList<string> Languages(GameEntry game)
+    {
+        var source = game.InLanguageOf ?? game;
+        return LanguageGroups(source)
+            .Where(g => g.Any(m => source.Owners.ContainsKey(m.Depot)))
+            .SelectMany(g => g.Select(m => m.Language))
+            .Distinct()
+            .OrderBy(SteamLanguages.Order)
+            .ThenBy(l => l, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>The language a game's depots are in as it is: the one chosen for it, or the language most of its language depots have.</summary>
+    public string? LanguageOf(GameEntry game)
+    {
+        if (game.Language is { } chosen) return chosen;
+        var byDepot = LanguageGroups(game).SelectMany(g => g).Where(m => game.Owners.ContainsKey(m.Depot)).ToList();
+        return byDepot.GroupBy(m => m.Language)
+            .OrderByDescending(g => g.Count())
+            .ThenBy(g => SteamLanguages.Order(g.Key))
+            .Select(g => g.Key)
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// The language Steam would download this game in: the language it is installed in, or else the Steam client's, when the
+    /// game has it; English otherwise. Null for a game with no language depots.
+    /// </summary>
+    public string? DefaultLanguage(GameEntry game)
+    {
+        var offered = Languages(game);
+        if (offered.Count == 0) return null;
+        var source = game.InLanguageOf ?? game;
+        foreach (var candidate in new[] { source.Installed?.Language, SteamLanguages.ClientLanguage(), LanguageOf(source), SteamLanguages.English })
+            if (candidate is not null && offered.Contains(candidate.ToLowerInvariant())) return candidate.ToLowerInvariant();
+        return offered[0];
+    }
+
+    /// <summary>
+    /// The game with its language depots in <paramref name="language"/>: in each group of the same content it has a depot of,
+    /// that language's depot instead, where the group has one. The game itself when that changes nothing.
+    /// </summary>
+    public GameEntry ForLanguage(GameEntry game, string language)
+    {
+        var source = game.InLanguageOf ?? game;
+        language = language.Trim().ToLowerInvariant();
+
+        var owners = new Dictionary<uint, uint>(source.Owners);
+        var swaps = new Dictionary<uint, uint>();
+        foreach (var group in LanguageGroups(source))
+        {
+            var have = group.Where(m => source.Owners.ContainsKey(m.Depot)).ToList();
+            var wanted = group.FirstOrDefault(m => m.Language == language);
+            if (have.Count == 0 || wanted.Depot == 0 || have.Any(m => m.Depot == wanted.Depot)) continue;
+            foreach (var m in have) owners.Remove(m.Depot);
+            owners[wanted.Depot] = wanted.Owner;
+            swaps[wanted.Depot] = have[0].Depot;
+        }
+        if (swaps.Count == 0) return source;
+
+        var latest = new Dictionary<uint, ulong>();
+        foreach (var (depot, owner) in owners)
+        {
+            var ownerInfo = owner == source.AppId ? source.Info : _infos.GetValueOrDefault(owner);
+            if (ownerInfo?.Depot(depot)?.PublicManifest is { } manifest) latest[depot] = manifest;
+        }
+        return new GameEntry
+        {
+            AppId = source.AppId,
+            Name = source.Name,
+            Title = source.Title,
+            Installed = source.Installed,
+            Info = source.Info,
+            Owners = owners,
+            InstalledManifests = source.InstalledManifests?.Where(m => owners.ContainsKey(m.Key)).ToDictionary(m => m.Key, m => m.Value),
+            LatestManifests = latest.Count > 0 ? latest : null,
+            InLanguageOf = source,
+            Language = language,
+            LanguageSwaps = swaps,
+        };
     }
 
     public CachedManifest? Cached(uint depot, ulong manifest) => _cached.GetValueOrDefault((depot, manifest));
@@ -308,7 +470,8 @@ public sealed class GameLibrary
         var name = !string.IsNullOrWhiteSpace(info?.Name) ? info.Name
             : List.Names.TryGetValue(depot, out var listed) ? listed
             : IsDlc(game, depot) ? $"DLC {info?.DlcAppId ?? _installed.GetValueOrDefault(game.OwnerOf(depot))?.Depots.GetValueOrDefault(depot)?.DlcAppId}"
-            : !string.IsNullOrEmpty(info?.Language) ? $"{info.Language} language"
+                                   + (!string.IsNullOrEmpty(info?.Language) ? $", {SteamLanguages.Name(info.Language)}" : "")
+            : !string.IsNullOrEmpty(info?.Language) ? $"{SteamLanguages.Name(info.Language)} language"
             : "";
 
         var owner = game.OwnerOf(depot);

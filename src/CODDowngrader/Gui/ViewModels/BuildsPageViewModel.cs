@@ -51,6 +51,8 @@ public sealed class BuildsPageViewModel : Observable, IHasBack
     readonly MainViewModel _main;
     readonly string? _path;
     bool _loading = true;
+    bool _searching;
+    string? _searchResult;
 
     /// <param name="path">The list to show; the tool's own when null.</param>
     public BuildsPageViewModel(MainViewModel main, string? path = null)
@@ -58,7 +60,56 @@ public sealed class BuildsPageViewModel : Observable, IHasBack
         _main = main;
         _path = path;
         BackCommand = new Command(() => _main.Back());
+        FindCommand = new Command(FindAsync, () => !_searching && !_loading);
         Loaded = LoadAsync();
+    }
+
+    /// <summary>Looks through a folder for downloads and patch folders made by COD Downgrader, and puts those the list lacks on it.</summary>
+    public Command FindCommand { get; }
+
+    public bool Searching
+    {
+        get => _searching;
+        private set
+        {
+            Set(ref _searching, value);
+            FindCommand.Changed();
+        }
+    }
+
+    /// <summary>What the last search found.</summary>
+    public string? SearchResult
+    {
+        get => _searchResult;
+        private set
+        {
+            Set(ref _searchResult, value);
+            Raise(nameof(HasSearchResult));
+        }
+    }
+
+    public bool HasSearchResult => _searchResult is not null;
+
+    async Task FindAsync()
+    {
+        if (await _main.Platform.PickFolderAsync("The folder your builds are in", null) is not { } root) return;
+        Searching = true;
+        SearchResult = $"Looking in {root}…";
+        var library = _main.Library;
+        var path = _path;
+        var (found, added) = await Task.Run(() =>
+        {
+            var builds = MadeBuilds.Find(root, library);
+            return (builds.Count, MadeBuilds.AddFound(builds, path));
+        });
+        SearchResult = found == 0
+            ? $"{root} holds no download and no patch folder from COD Downgrader."
+            : $"{(found == 1 ? "1 build" : $"{found} builds")} in {root}: "
+              + (added == 0 ? "all of them were on the list already."
+                  : !Catalog.Remembered.Writing ? $"{added} new, not kept, since this run remembers nothing new."
+                  : $"{added} added to the list.");
+        Searching = false;
+        if (added > 0 && Catalog.Remembered.Writing) await LoadAsync();
     }
 
     public ObservableCollection<MadeBuildItem> Builds { get; } = new();
@@ -74,6 +125,7 @@ public sealed class BuildsPageViewModel : Observable, IHasBack
         {
             Set(ref _loading, value);
             Raise(nameof(IsEmpty));
+            FindCommand.Changed();
         }
     }
 
@@ -81,6 +133,7 @@ public sealed class BuildsPageViewModel : Observable, IHasBack
 
     async Task LoadAsync()
     {
+        Loading = true;
         var library = _main.Library;
         var found = await Task.Run(() => MadeBuilds.Load(library, _path)
             .OrderByDescending(b => b.Made)
@@ -95,11 +148,13 @@ public sealed class BuildsPageViewModel : Observable, IHasBack
             var folder = build.Folder;
             var game = library?.Entries.FirstOrDefault(e => e.AppId == build.AppId);
             var canWrite = library is not null && game is { Installed: not null, Downgradable: true };
+            // A download in a language the game is not installed in stays in its folder.
+            var otherLanguage = shared?.Language is { } language && game is not null && library?.LanguageOf(game) != language;
             Builds.Add(new MadeBuildItem(build, state, _main.IconOf(build.AppId),
                 shared is null ? null : new Command(() => _main.Show(new SharePageViewModel(_main, shared))),
                 exists ? new Command(() => _main.Platform.Open(folder)) : null,
                 new Command(() => Remove(build)),
-                canWrite && holds ? new Command(() => _main.Show(new ActionPageViewModel(_main, new GamePageViewModel(_main, library!, game!), "apply", null, folder))) : null,
+                canWrite && holds && !otherLanguage ? new Command(() => _main.Show(new ActionPageViewModel(_main, new GamePageViewModel(_main, library!, game!), "apply", null, folder))) : null,
                 canWrite && inGame ? new Command(() => _main.Show(new ActionPageViewModel(_main, new GamePageViewModel(_main, library!, game!), "undo", null))) : null));
         }
         Loading = false;

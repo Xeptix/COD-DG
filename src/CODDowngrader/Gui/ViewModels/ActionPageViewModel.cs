@@ -99,6 +99,17 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
     string _folder = "";
     BuildItem? _patchFrom;
     JsonObject? _plan;
+    LanguageChoice? _language;
+
+    /// <summary>The folder the job suggested, which follows the language while it is left as it is.</summary>
+    string? _suggestedFolder;
+
+    /// <summary>Manifests the SteamDB helper filled in for depots the build needed, as "depot=manifest".</summary>
+    readonly List<string> _foundManifests = new();
+
+    /// <summary>What the last plan said it needed from SteamDB, and the moment to take each manifest at.</summary>
+    IReadOnlyList<NeededManifest> _needs = Array.Empty<NeededManifest>();
+    DateTimeOffset? _neededBefore;
 
     /// <summary>The files a shared build chose, ticked when the plan arrives.</summary>
     readonly HashSet<string>? _chosenFiles;
@@ -141,6 +152,15 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
             }
         }
 
+        // A download can be in any language Steam has for the game, and starts in the one Steam would download.
+        if (kind == "download" && main.Library is { } library && library.Languages(game.Game) is { Count: > 1 } languages)
+        {
+            var steamDefault = library.DefaultLanguage(game.Game);
+            foreach (var code in languages) Languages.Add(Flags.Choice(code, steamDefault));
+            var wanted = build?.Settings.Language ?? steamDefault;
+            _language = Languages.FirstOrDefault(l => l.Code == wanted) ?? Languages.FirstOrDefault(l => l.IsDefault) ?? Languages[0];
+        }
+
         if (kind == "patch")
         {
             PatchStarts = game.PatchStarts;
@@ -155,7 +175,7 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
         BrowseCommand = new Command(BrowseAsync);
         StartCommand = new Command(Start, () => CanStart);
         RetryCommand = new Command(PlanAsync, () => !_isPlanning);
-        FindManifestsCommand = new Command(() => _main.Back(), () => _errorCode == "needs-manifests");
+        FindManifestsCommand = new Command(FindManifests, () => _errorCode == "needs-manifests");
 
         if (kind == "apply" && folder is { Length: > 0 }) _folder = folder;
         if (kind != "apply" || _folder.Length > 0) _ = PlanAsync();
@@ -205,6 +225,21 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
     public string? AgainText => Again && _game.Applied is { } applied ? $"{applied.Title} comes out of the game first." : null;
 
     public ObservableCollection<FolderChoice> Folders { get; } = new();
+
+    public ObservableCollection<LanguageChoice> Languages { get; } = new();
+    public bool HasLanguages => Languages.Count > 1;
+
+    /// <summary>The language the download is in. Choosing another works out the download again, and forgets manifests found for the last one.</summary>
+    public LanguageChoice? Language
+    {
+        get => _language;
+        set
+        {
+            if (value is null || !Set(ref _language, value)) return;
+            _foundManifests.Clear();
+            _ = PlanAsync();
+        }
+    }
     public IReadOnlyList<BuildItem> PatchStarts { get; } = Array.Empty<BuildItem>();
     public List<string> Siblings { get; } = new();
 
@@ -349,6 +384,7 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
     JobSettings Settings(bool plan)
     {
         var baseline = _build?.Settings ?? new JobSettings();
+        var manifests = baseline.Manifests.Concat(_foundManifests).ToList();
         var files = Part == 3
             ? string.Join(",", Folders.SelectMany(f => f.Files).Where(f => f.IsChecked).Select(f => f.Name))
             : null;
@@ -364,7 +400,10 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
             NoSeed = IsDownload && !StartFromInstall,
             Delete = DeleteAfter,
             Again = Again,
-            To = IsDownload || IsPatch ? NullIfEmpty(Folder) : null,
+            To = IsDownload || IsPatch ? (plan && Folder == _suggestedFolder ? null : NullIfEmpty(Folder)) : null,
+            Language = IsDownload ? _language?.Code ?? baseline.Language : baseline.Language,
+            Manifests = manifests,
+            Label = _foundManifests.Count > 0 ? baseline.Label ?? _build?.Title : baseline.Label,
             From = IsPatch ? _patchFrom?.Key : IsApply ? NullIfEmpty(Folder) : null,
         };
     }
@@ -396,7 +435,15 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
             if (result["ok"]?.GetValue<bool>() != true)
             {
                 _errorCode = result["error"]?["code"]?.GetValue<string>();
-                Error = result["error"]?["message"]?.GetValue<string>() ?? "It could not be worked out what would change.";
+                Error = (result["error"]?["message"]?.GetValue<string>() ?? "It could not be worked out what would change.")
+                    .Replace(" Add each one with --manifest depot=manifest.", "", StringComparison.Ordinal);
+                _needs = (result["needs"]?.AsArray() ?? new JsonArray())
+                    .Select(n => new NeededManifest(n!["depot"]!.GetValue<uint>(), n["app"]!.GetValue<uint>(), n["url"]!.GetValue<string>()))
+                    .ToList();
+                _neededBefore = result["neededBefore"]?.GetValue<string>() is { } before
+                    && DateTimeOffset.TryParse(before, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var moment)
+                    ? moment
+                    : null;
                 Raise(nameof(NeedsManifests));
                 FindManifestsCommand.Changed();
                 return;
@@ -421,7 +468,11 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
     void Take(JsonObject result)
     {
         _plan = result["plan"]?.AsObject();
-        if (result["folder"]?.GetValue<string>() is { } folder && (Folder.Length == 0 || IsApply)) Folder = folder;
+        if (result["folder"]?.GetValue<string>() is { } folder && (Folder.Length == 0 || IsApply || Folder == _suggestedFolder))
+        {
+            Folder = folder;
+            _suggestedFolder = folder;
+        }
 
         Folders.Clear();
         PersonalizedCopies.Clear();
@@ -591,6 +642,29 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
         StartCommand.Changed();
     }
 
+    /// <summary>Opens the SteamDB helper for the depots the plan needed; what is pasted there joins the build, and it is worked out again.</summary>
+    void FindManifests()
+    {
+        if (_main.Library is not { } library || _needs.Count == 0)
+        {
+            _main.Back();
+            return;
+        }
+        var language = IsDownload && _language is { } chosen ? $" in {chosen.Name}" : "";
+        var explanation = $"For “{_build?.Title ?? "this build"}”{language}, Steam's product info on this PC does not name these depots' manifests."
+                          + (_neededBefore is { } before
+                              ? $" On each depot's SteamDB page, the one to take is the newest first seen before {before.ToLocalTime():d MMM yyyy HH:mm}: paste the rows and it is picked for you."
+                              : " Paste the manifest each one had in that build.");
+        _main.Show(HelperPageViewModel.ForBuild(_main, library, _game.Game, $"{_game.Name}{language}: manifests from SteamDB", explanation, _needs, _neededBefore,
+            found =>
+            {
+                var depots = found.Select(f => f.Split('=')[0]).ToHashSet();
+                _foundManifests.RemoveAll(m => depots.Contains(m.Split('=')[0]));
+                _foundManifests.AddRange(found);
+                _ = PlanAsync();
+            }));
+    }
+
     async Task BrowseAsync()
     {
         var title = IsApply ? "The patch folder, or the folder a build was downloaded into" : "Where the files go";
@@ -615,7 +689,7 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
         var title = Kind switch
         {
             "ingame" => $"Putting {_build?.Title} into {_game.Name}",
-            "download" => $"Downloading {_build?.Title}",
+            "download" => $"Downloading {_build?.Title}{(HasLanguages && _language is { } language ? $" in {language.Name}" : "")}",
             "patch" => $"Saving a patch folder for {_build?.Title}",
             "undo" => $"Undoing {_game.Applied?.Title}",
             _ => $"Applying {Folder}",

@@ -72,9 +72,20 @@ public static class Selectors
     /// <paramref name="manifests"/> entry is "depot=manifest", which changes that depot alone. Null with
     /// <paramref name="error"/> set when nothing matches.
     /// </summary>
-    public static BuildTarget? Build(GameEntry game, BuildHistoryResult history, string? build, IReadOnlyList<string> manifests, out string? error)
+    public static BuildTarget? Build(GameEntry game, BuildHistoryResult history, string? build, IReadOnlyList<string> manifests, out string? error) =>
+        Build(game, history, build, manifests, out error, out _, out _);
+
+    /// <summary>
+    /// As <see cref="Build(GameEntry, BuildHistoryResult, string?, IReadOnlyList{string}, out string?)"/>, and when the build has
+    /// depots whose manifest is not known here, <paramref name="needs"/> lists them and <paramref name="before"/> is the moment
+    /// to look them up at: each one's manifest is the newest SteamDB first saw before it.
+    /// </summary>
+    public static BuildTarget? Build(GameEntry game, BuildHistoryResult history, string? build, IReadOnlyList<string> manifests, out string? error,
+        out IReadOnlyList<NeededManifest> needs, out DateTimeOffset? before)
     {
         error = null;
+        needs = Array.Empty<NeededManifest>();
+        before = null;
         if (build is null && manifests.Count == 0)
         {
             error = "Name a build with --build, or its depots with --manifest.";
@@ -110,7 +121,9 @@ public static class Selectors
             var chosen = history.Builds[found[0].Index];
             if (chosen.Unknown.Count > 0 && manifests.Count == 0)
             {
-                error = $"The manifest of depots {string.Join(", ", chosen.Unknown)} of that build is not known here. Add them with --manifest.";
+                needs = Needs(game, chosen.Unknown);
+                before = NeededBefore(chosen);
+                error = UnknownText(chosen.Unknown, before);
                 return null;
             }
             target = new BuildTarget(chosen.Manifests, Format.BuildTitles(game, history.Builds)[found[0].Index], found[0].Key, chosen);
@@ -141,6 +154,23 @@ public static class Selectors
         var label = target is null ? "Manifests named on the command line" : $"{target.Label}, with manifests named on the command line";
         return new BuildTarget(chosenManifests, label, target?.Key ?? "manifests", target?.Build);
     }
+
+    /// <summary>Each depot's SteamDB page, for depots whose manifest has to come from there.</summary>
+    public static IReadOnlyList<NeededManifest> Needs(GameEntry game, IEnumerable<uint> depots) =>
+        depots.OrderBy(d => d).Select(d => new NeededManifest(d, game.OwnerOf(d), BuildTimeline.SteamDbManifests(d))).ToList();
+
+    /// <summary>
+    /// The moment a build's missing manifests are looked up at: shortly before the update that replaced it began, since every
+    /// manifest of one update is first seen within minutes. Null for a build nothing replaced.
+    /// </summary>
+    public static DateTimeOffset? NeededBefore(Build build) => build.ReplacedBy?.Time?.AddMinutes(-10);
+
+    /// <summary>What to tell someone about depots of a build whose manifest is not known here.</summary>
+    public static string UnknownText(IReadOnlyCollection<uint> depots, DateTimeOffset? before) =>
+        $"The manifest of {(depots.Count == 1 ? "depot" : "depots")} {string.Join(", ", depots.OrderBy(d => d))} of that build is not known here."
+        + (before is { } moment
+            ? $" On each depot's SteamDB page, take the newest manifest first seen before {moment.ToLocalTime().ToString("d MMM yyyy HH:mm", CultureInfo.InvariantCulture)}."
+            : "");
 
     /// <summary>The build job settings name, without a job to report on: --at, or --build with --manifest. Null with <paramref name="error"/> set.</summary>
     public static BuildTarget? Of(GameEntry game, BuildHistoryResult history, Jobs.JobSettings settings, out string? error) =>

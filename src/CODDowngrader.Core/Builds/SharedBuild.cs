@@ -16,8 +16,9 @@ namespace CODDowngrader.Builds;
 /// </summary>
 /// <param name="Only">content or binaries; null for every file.</param>
 /// <param name="Files">The files chosen one by one, instead of <paramref name="Only"/>.</param>
+/// <param name="Language">The language chosen for a download, as Steam's code names it; null for the languages the game had.</param>
 public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnlyDictionary<uint, ulong> Manifests,
-    string? Only = null, IReadOnlyList<string>? Files = null, bool Siblings = false)
+    string? Only = null, IReadOnlyList<string>? Files = null, bool Siblings = false, string? Language = null)
 {
     public const string Header = "COD Downgrader shared build";
 
@@ -39,6 +40,7 @@ public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnl
         text.Append(Header).Append('\n');
         text.Append("game ").Append(AppId.ToString(CultureInfo.InvariantCulture)).Append(' ').Append(OneLine(Game)).Append('\n');
         text.Append("title ").Append(OneLine(Title)).Append('\n');
+        if (Language is { Length: > 0 }) text.Append("language ").Append(OneLine(Language)).Append('\n');
         foreach (var (depot, manifest) in Manifests.OrderBy(m => m.Key))
             text.Append("manifest ").Append(depot.ToString(CultureInfo.InvariantCulture)).Append('=').Append(manifest.ToString(CultureInfo.InvariantCulture)).Append('\n');
         if (FileNames.Count > 0)
@@ -69,6 +71,7 @@ public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnl
         var game = "";
         string? title = null;
         string? only = null;
+        string? language = null;
         var siblings = false;
         var manifests = new Dictionary<uint, ulong>();
         var files = new List<string>();
@@ -96,6 +99,9 @@ public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnl
                 }
                 case "title":
                     title = rest;
+                    break;
+                case "language":
+                    language = rest.Length > 0 && rest.All(char.IsAsciiLetter) ? rest.ToLowerInvariant() : null;
                     break;
                 case "manifest":
                 {
@@ -127,7 +133,7 @@ public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnl
                     : "That shared build names no manifests.";
             return null;
         }
-        return new SharedBuild(app.Value, game, title is { Length: > 0 } ? title : "A shared build", manifests, files.Count > 0 ? null : only, files, siblings);
+        return new SharedBuild(app.Value, game, title is { Length: > 0 } ? title : "A shared build", manifests, files.Count > 0 ? null : only, files, siblings, language);
     }
 
     /// <summary>The words a part of a build is recorded under, as --only takes them: content or binaries, or null.</summary>
@@ -149,7 +155,7 @@ public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnl
         if (own.Count == 0) own = manifests;
         var names = (files ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(ManifestFile.NormalizeName).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        return new SharedBuild(game.AppId, game.Name, title, own, names.Count > 0 ? null : only is "content" or "binaries" ? only : null, names, siblings);
+        return new SharedBuild(game.AppId, game.Name, title, own, names.Count > 0 ? null : only is "content" or "binaries" ? only : null, names, siblings, game.Language);
     }
 
     /// <summary>A downgrade written into a game, as its record keeps it.</summary>
@@ -166,7 +172,7 @@ public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnl
 
     /// <summary>A whole build downloaded into a folder of its own.</summary>
     public static SharedBuild Of(DownloadPart part, GameEntry game) =>
-        Of(game, part.ManifestMap(), part.Build, only: null, files: null, siblings: false);
+        Of(game, part.ManifestMap(), part.Build, only: null, files: null, siblings: false) with { Language = part.Language };
 }
 
 /// <summary>
@@ -192,7 +198,13 @@ public static class SharedBuilds
             error = $"{game.Name}: {game.Title!.NotDowngradable}";
             return null;
         }
-        return game;
+        if (shared.Language is not { } language) return game;
+        if (!library.Languages(game).Contains(language))
+        {
+            error = $"That build is {game.Name} in {SteamLanguages.Name(language)}, which Steam does not have for it here.";
+            return null;
+        }
+        return library.ForLanguage(game, language);
     }
 
     /// <summary>
@@ -233,7 +245,7 @@ public static class SharedBuilds
         if (index >= 0)
         {
             var key = Selectors.Keys(history.Builds)[index];
-            var settings = new JobSettings { Build = key, Only = shared.Only, Files = files, Siblings = shared.Siblings };
+            var settings = new JobSettings { Build = key, Only = shared.Only, Files = files, Siblings = shared.Siblings, Language = game.Language };
             return new SharedTarget(game, settings, key, Format.BuildTitles(game, history.Builds)[index], history.Builds[index], notes);
         }
 
@@ -247,6 +259,7 @@ public static class SharedBuilds
             Only = shared.Only,
             Files = files,
             Siblings = shared.Siblings,
+            Language = game.Language,
         };
         return new SharedTarget(game, named, "shared", shared.Title, null, notes);
     }

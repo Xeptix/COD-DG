@@ -70,7 +70,7 @@ public static class Format
             }
         }
 
-        if (build.Unknown.Count > 0) parts.Add($"{build.Unknown.Count} depots unknown");
+        if (build.Unknown.Count > 0) parts.Add(build.Unknown.Count == 1 ? "1 depot unknown" : $"{build.Unknown.Count} depots unknown");
         return parts.Count == 0 ? "" : " · " + string.Join(" · ", parts);
     }
 }

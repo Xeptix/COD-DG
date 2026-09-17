@@ -56,7 +56,8 @@ in `SHA256SUMS`.
      them in. See [Into the installed game](#into-the-installed-game).
    - **Download into a folder of its own** leaves the installed game as it is. The first download goes into
      `COD Downgrader` inside the game's Steam library, beside `steamapps`, and later ones default to wherever
-     the last one went; anywhere outside `steamapps` works. See [What ends up in the folder](#what-ends-up-in-the-folder).
+     the last one went; anywhere outside `steamapps` works. A download can be in any language Steam has for the
+     game. See [What ends up in the folder](#what-ends-up-in-the-folder) and [Languages](#languages).
    - **Save a patch folder** downloads only the files that differ from another build, to put into the
      game later. See [Patch folders](#patch-folders).
 4. COD Downgrader works out **what changes** and shows it before anything happens: how many files, how
@@ -82,7 +83,9 @@ changed one at a time.
 **Your builds**, below the games, lists every downgrade, download and patch folder made on this PC, newest
 first, with where each one is and whether it is still there, and **Share** on each. A download or a patch folder
 that is still there has **Put it into the game**, and the downgrade in a game now has **Undo it**, each with
-that same page first. **Open a build** is for
+that same page first. **Find builds in a folder** adds the downloads and patch folders COD Downgrader made in a
+folder you choose and the folders under it, such as ones made before the list existed or on another PC, and
+changes nothing in them. **Open a build** is for
 builds that are not in a game's list: a shared build someone sent you, and a patch folder or a downloaded build
 you already have. Choose the folder and it says which game and build it holds, with **Put it into the game**
 and **Share it**. Esc, or the mouse's back button, goes back a page.
@@ -238,6 +241,27 @@ checking every file in the folder. A patch made from a different build than the 
 first. It takes a folder a whole build was downloaded into as well, lets you choose which of its files go
 in, and can delete that folder afterwards.
 
+## Languages
+
+A download into a folder of its own can be in any language Steam has for the game. **Language** on the download
+page lists them with their flags, starting on the one Steam downloads for you: the language the game is installed
+in, or else the Steam client's language when the game has it, or else English. Only the language depots change
+(the game's text and speech); the rest of the build is the same. The folder's name says which language it holds.
+
+Steam's product info names the manifest each language's depots have today. In a build where the game's own
+language depots have today's manifest, the other language's depots take today's manifest too. For an older build
+they come from SteamDB: the page says so and **Get them from SteamDB** opens the depots to paste, each with the
+moment to take its manifest at, the newest first seen before the update that replaced the build. What is pasted
+is remembered.
+
+A build in another language stays in its folder: **Put it into the game** and **Save a patch folder** work in the
+language the game is installed in, and applying a download in another language to the game is refused. To play
+the game in another language in place, change its language in Steam.
+
+On the command line, `download <game> --language german` downloads a build in German, and
+`builds <game> --language german` lists the builds with what each needs from SteamDB. `builds --json` lists each
+game's languages, the one it is in, and the one Steam downloads for you.
+
 ## Sharing a build
 
 A downgrade, a patch or a download you made can go to anyone else who owns the game. **Share** at the end of
@@ -255,7 +279,7 @@ only binaries
 ```
 
 It names the game, the manifest of each of its depots (one line each), the files that were chosen, and
-whether the game sharing the folder went along. It holds no game files. Whoever you send it to chooses **Open a
+whether the game sharing the folder went along, and a `language` line for a download in another language. It holds no game files. Whoever you send it to chooses **Open a
 build**, pastes it or opens the file, and has that build chosen on the game's page with the same files ticked. From there it is theirs to put into the game, download or save as a patch, and every file comes from
 Steam to their own account, so it only works for someone who owns the game.
 
@@ -362,7 +386,9 @@ CODDowngrader ingame 202990 --at 2015-03-12 --plan
 CODDowngrader patch 202990 --build 2026-09-10 --from latest --to "X:\BO2 patch"
 CODDowngrader apply 202990 --from "X:\BO2 patch"
 CODDowngrader undo 202990
+CODDowngrader download 311210 --build latest --language french
 CODDowngrader history                       every download, downgrade and patch folder made here
+CODDowngrader history --find "B:\COD"      and first, the ones in a folder that are not on the list yet
 CODDowngrader share 202990 --build 2015-02-10 --only binaries --to "X:\shared"
 CODDowngrader ingame --shared "X:\shared\COD Downgrader build - Call of Duty - Black Ops II - Multiplayer - Before the update of 10 Feb 2015.txt"
 CODDowngrader login
@@ -394,6 +420,8 @@ when Steam fetched it, when SteamDB first saw it and whether it is only remember
 |---|---|
 | `--to <folder>` | Where a download, a patch, an export or a shared build goes. Left out, a download or a patch goes where the last one went |
 | `--from <build\|folder>` | `patch`: the build it starts from. `apply`: the folder to take |
+| `--language <language>` | `download`, `builds`: the build in another language Steam has for the game, by Steam's name for it: `english`, `french`, `german`, `spanish`, `italian`, `russian`, `polish`, `japanese`, `brazilian`, `schinese` and so on. `builds --json` lists each game's |
+| `--find <folder>` | `history`: first add the downloads and patch folders COD Downgrader made in that folder and the folders under it |
 | `--only <what>` | `all` (the default), `content` (keep your exes and DLLs), or `binaries` |
 | `--files <name,name>` | Only these files of the build, instead of `--only` |
 | `--shared <file>` | `download`, `ingame`, `patch`: the build a shared build names, with the files and options it came with. `-` reads it from standard input. `--only` and `--files` still choose the part |
@@ -471,7 +499,8 @@ the backup, from Steam, deleted, kept because Steam has put them back, and any t
 whose manifest changes. A command that did not work says why in the same
 shape: `"ok": false` and `"error": { "code": "signin", "message": "..." }`. The codes are words to switch
 on, such as `signin`, `locked`, `not-owned`, `no-build`, `needs-manifests`, `already-applied` and
-`incomplete`; `needs-manifests` comes with a `needs` list of the depots and their SteamDB pages.
+`incomplete`; `needs-manifests` comes with a `needs` list of the depots and their SteamDB pages, and
+`neededBefore`, the moment each manifest is taken at.
 
 | Exit code | Meaning |
 |---|---|
@@ -524,6 +553,7 @@ python tools/build.py
 - `src/CODDowngrader.Stub` is `CODDowngrader.com`.
 - `tools/GuiShots` draws every page of the window to a PNG from this PC's Steam data:
   `dotnet run --project tools/GuiShots -- <folder>`.
+- `tools/make_icon.py` and `tools/make_flags.py` draw the icon and the language flags (Pillow).
 
 ### Updating the built-in list
 
@@ -546,6 +576,14 @@ It takes the manifest rows, each depot's name and owning app, and the depots a d
 out, such as low-violence content.
 
 ## Changelog
+
+### v1.1.3
+
+- Downloads in any language Steam has for the game, chosen from a list with flags that starts on the language Steam
+  downloads for you. Language depots an older build needs from SteamDB are asked for on the download page. The
+  command line has it as `--language`, and a shared build carries the language.
+- **Find builds in a folder** in Your builds adds the downloads and patch folders COD Downgrader made in a folder and
+  the folders under it; `history --find <folder>` on the command line.
 
 ### v1.1.2
 

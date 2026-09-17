@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CODDowngrader.App;
 using CODDowngrader.Builds;
 using CODDowngrader.Patching;
+using CODDowngrader.Catalog;
 using CODDowngrader.Steam;
 
 namespace CODDowngrader.Cli;
@@ -13,6 +14,16 @@ public static class ReadCommands
     public static int History(CliRun run, SteamInstall steam, GameEntry? only)
     {
         var library = GameLibrary.Load(steam);
+        if (run.Command.Value("find") is { } search)
+        {
+            var root = PathRules.Normalize(search.Trim().Trim('"'));
+            if (!Directory.Exists(root)) return run.Fail(ExitCode.Usage, "no-folder", $"{root} is not a folder.");
+            var found = MadeBuilds.Find(root, library).Where(b => only is null || b.AppId == only.AppId).ToList();
+            var added = MadeBuilds.AddFound(found);
+            run.Line($"{(found.Count == 1 ? "1 build" : $"{found.Count} builds")} in {root}, {added} of them new to the list{(Remembered.Writing ? "" : ", and not kept: this run remembers nothing new")}.");
+            run.Line();
+            run.Set("found", new JsonObject { ["folder"] = root, ["builds"] = found.Count, ["added"] = Remembered.Writing ? added : 0 });
+        }
         var builds = MadeBuilds.Load(library).Where(b => only is null || b.AppId == only.AppId).OrderByDescending(b => b.Made).ToList();
         var list = run.Array("builds");
         if (builds.Count == 0)
@@ -76,6 +87,11 @@ public static class ReadCommands
             return run.Ok();
         }
 
+        if (run.Settings.Language is { Length: > 0 } language)
+        {
+            if (Actions.InLanguage(run, library, game, language) is not { } inLanguage) return run.Reported ?? (int)ExitCode.Usage;
+            game = inLanguage;
+        }
         var history = library.History(game);
         if (run.Command.Value("at") is { } at)
         {
@@ -186,6 +202,13 @@ public static class ReadCommands
                     ["backup"] = applied.Backup,
                 };
             }
+        }
+
+        if (library.Languages(game) is { Count: > 0 } languages)
+        {
+            node["language"] = library.LanguageOf(game);
+            node["defaultLanguage"] = library.DefaultLanguage(game);
+            node["languages"] = new JsonArray(languages.Select(l => (JsonNode)new JsonObject { ["code"] = l, ["name"] = SteamLanguages.Name(l) }).ToArray());
         }
 
         if (!withBuilds || !game.Downgradable) return node;

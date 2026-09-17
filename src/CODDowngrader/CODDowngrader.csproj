@@ -36,6 +36,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\icon.ico" />
     <AvaloniaResource Include="Assets\icon.png" />
+    <AvaloniaResource Include="Assets\Flags\*.png" />
   </ItemGroup>
 
   <ItemGroup>

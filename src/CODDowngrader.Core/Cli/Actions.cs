@@ -24,6 +24,15 @@ public static partial class Actions
         if (!game.Downgradable && command != "undo")
             return run.Fail(ExitCode.Usage, "not-downgradable", $"{game.Name}: {game.Title!.NotDowngradable}");
 
+        if (run.Settings.Language is { Length: > 0 } language)
+        {
+            if (InLanguage(run, library, game, language) is not { } inLanguage) return run.Reported ?? (int)ExitCode.Usage;
+            if (inLanguage != game && command != "download")
+                return run.Fail(ExitCode.Usage, "language-download-only",
+                    $"{game.Name} in {SteamLanguages.Name(inLanguage.Language!)} can only be downloaded into a folder of its own: the installed game is in {SteamLanguages.Name(library.LanguageOf(game) ?? SteamLanguages.English)}.");
+            game = inLanguage;
+        }
+
         var code = command switch
         {
             "download" => await DownloadAsync(run, library, game),
@@ -45,11 +54,21 @@ public static partial class Actions
 
     static async Task<int> DownloadAsync(Job run, GameLibrary library, GameEntry game)
     {
-        if (Target(run, library, game) is not { } target) return (int)ExitCode.Usage;
+        if (Target(run, library, game) is not { } target) return run.Reported ?? (int)ExitCode.Usage;
         if (target.Manifests.Count == 0 || target.Manifests.Values.Any(m => m == 0))
             return run.Fail(ExitCode.Usage, "no-manifests", "Every depot of this build needs a manifest ID. Add them with --manifest.");
 
-        var destination = Destination(run, library, game, $"{game.Name} ({target.Key})", out var error);
+        // A whole build takes every depot: one whose manifest is not known here, and was not named, comes from SteamDB first.
+        if (target.Build is { } chosenBuild && chosenBuild.Unknown.Where(d => !target.Manifests.ContainsKey(d)).ToList() is { Count: > 0 } unknown)
+        {
+            var before = Selectors.NeededBefore(chosenBuild);
+            return NeedsManifests(run, library, game, Selectors.Needs(game, unknown), before,
+                Selectors.UnknownText(unknown, before) + " Add each one with --manifest depot=manifest.");
+        }
+        if (game.Language is { } language) run.Set("language", language);
+
+        if (game.Language is { } inLanguage) target = target with { Label = $"{target.Label}, in {SteamLanguages.Name(inLanguage)}" };
+        var destination = Destination(run, library, game, $"{game.Name} ({target.Key}{(game.Language is { } folderLanguage ? $", {SteamLanguages.Name(folderLanguage)}" : "")})", out var error);
         if (destination is null) return run.Fail(ExitCode.Usage, "no-folder", error!);
 
         var record = AppState.LoadRecord(destination, out var unreadable);
@@ -120,6 +139,7 @@ public static partial class Actions
         if (!resuming)
         {
             part.Build = target.Label;
+            part.Language = game.Language;
             part.Complete = false;
             part.Started = DateTimeOffset.Now;
             part.Finished = null;
@@ -208,6 +228,30 @@ public static partial class Actions
         run.Set("personalizedFiles", new JsonArray(personalized.Select(n => (JsonNode)JsonValue.Create(n)!).ToArray()));
         run.Set("shared", SharedBuild.Of(game, target.Manifests, target.Label, only: null, files: null, siblings: false).Text());
         return run.Ok();
+    }
+
+    /// <summary>
+    /// The game in a language --language names: itself when that changes none of its depots. Null once the failure has been
+    /// reported: the game has no such language on Steam.
+    /// </summary>
+    internal static GameEntry? InLanguage(Job run, GameLibrary library, GameEntry game, string language)
+    {
+        var offered = library.Languages(game);
+        var code = language.Trim().ToLowerInvariant();
+        if (offered.Contains(code)) return library.ForLanguage(game, code);
+        run.Fail(ExitCode.Usage, "no-language", offered.Count == 0
+            ? $"{game.Name} has no languages to choose from on Steam."
+            : $"{game.Name} is not on Steam in \"{language}\". Its languages are {string.Join(", ", offered)}.");
+        return null;
+    }
+
+    /// <summary>Reports depots whose manifest has to come from SteamDB: each one's page, and the moment to take the manifest at.</summary>
+    static int NeedsManifests(Job run, GameLibrary library, GameEntry game, IReadOnlyList<NeededManifest> needs, DateTimeOffset? before, string message)
+    {
+        run.Set("needs", Needs(library, game, needs));
+        if (before is { } moment) run.Set("neededBefore", moment.ToString("o", CultureInfo.InvariantCulture));
+        foreach (var need in needs) run.Line($"  {need.Depot,-8} {library.DepotName(game, need.Depot)}  {need.Url}");
+        return run.Fail(ExitCode.Failed, "needs-manifests", message);
     }
 
     /// <summary>
@@ -392,13 +436,12 @@ public static partial class Actions
                 run.Fail(ExitCode.Usage, "no-build", atError!);
                 return null;
             }
-            run.Set("needs", Needs(library, game, needs));
-            foreach (var need in needs) run.Line($"  {need.Depot,-8} {library.DepotName(game, need.Depot)}  {need.Url}");
-            run.Fail(ExitCode.Failed, "needs-manifests", atError + " Add each one with --manifest depot=manifest.");
+            NeedsManifests(run, library, game, needs, Selectors.Moment(at), atError + " Add each one with --manifest depot=manifest.");
             return null;
         }
-        var target = Selectors.Build(game, history, run.Settings.Build, run.Settings.Manifests, out var error);
-        if (target is null) run.Fail(ExitCode.Usage, "no-build", error!);
+        var target = Selectors.Build(game, history, run.Settings.Build, run.Settings.Manifests, out var error, out var unknown, out var before);
+        if (target is null && unknown.Count > 0) NeedsManifests(run, library, game, unknown, before, error + " Add each one with --manifest depot=manifest.");
+        else if (target is null) run.Fail(ExitCode.Usage, "no-build", error!);
         else RememberNamed(library, run.Settings.Manifests);
         return target;
     }
