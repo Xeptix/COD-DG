@@ -17,8 +17,10 @@ public static partial class Actions
     {
         if (game.Installed is not { } app || !Directory.Exists(app.InstallDir))
             return run.Fail(ExitCode.Usage, "not-installed", $"{game.Name} is not installed here.");
-        if (Target(run, library, game) is not { } target) return (int)ExitCode.Usage;
+        if (Target(run, library, game) is not { } target) return run.Reported ?? (int)ExitCode.Usage;
         if (Part(run) is not { } part) return (int)ExitCode.Usage;
+        if (!AllKnown(run, library, game, target)) return (int)ExitCode.Failed;
+        target = InLanguageLabel(game, target);
 
         // Steam puts its own files back when it verifies or updates a game, and --again writes the build in over that.
         if (TakeOutFirst(run, game, app) is { } stopped) return stopped;
@@ -75,8 +77,7 @@ public static partial class Actions
         }
 
         var folder = library.FolderManifests(app.InstallDir);
-        var baseManifests = manifests.Keys.Where(folder.ContainsKey).ToDictionary(d => d, d => folder[d]);
-        var kept = folder.Where(f => !manifests.TryGetValue(f.Key, out var t) || t == f.Value).ToDictionary(f => f.Key, f => f.Value);
+        var (baseManifests, baseDepots, kept) = Bases(game, manifests, folder);
         var staging = Path.Combine(app.Library, "COD Downgrader", "Staging", Interactive.Safe($"{game.AppId} {target.Key}"));
 
         if (await Login.ToolAsync(run) is not { } exe) return (int)ExitCode.Failed;
@@ -89,7 +90,7 @@ public static partial class Actions
         run.Line($"  into {app.InstallDir}");
         if (app.UpdatePending) run.Warn($"Steam has build {app.TargetBuildId} queued for this game, and installing it replaces these files again.");
 
-        if (await PlanAsync(run, library, game, exe, baseManifests, manifests, kept, staging, log, login) is not { } plan) return (int)ExitCode.Failed;
+        if (await PlanAsync(run, library, game, exe, baseManifests, baseDepots, manifests, kept, staging, log, login) is not { } plan) return (int)ExitCode.Failed;
 
         var check = PatchApplier.Check(app.InstallDir, plan, Reading(run, "Checking your installed files", plan.Writes.Aggregate(0UL, (sum, w) => sum + w.Size)));
         var full = plan;
@@ -152,6 +153,8 @@ public static partial class Actions
             TargetManifests = IdMap.Write(manifests),
             Owners = IdMap.Write(owners),
             Backup = backup,
+            Language = game.Language,
+            LanguageSwaps = IdMap.Write(game.LanguageSwaps),
         };
 
         try
@@ -174,16 +177,21 @@ public static partial class Actions
 
     static async Task<int> PatchAsync(Job run, GameLibrary library, GameEntry game)
     {
-        if (Target(run, library, game) is not { } target) return (int)ExitCode.Usage;
+        if (Target(run, library, game) is not { } target) return run.Reported ?? (int)ExitCode.Usage;
         if (Part(run) is not { } part) return (int)ExitCode.Usage;
+        if (!AllKnown(run, library, game, target)) return (int)ExitCode.Failed;
+        target = InLanguageLabel(game, target);
 
-        var history = library.History(game);
-        var fromKey = run.Settings.From ?? (Selectors.Build(game, history, "latest", Array.Empty<string>(), out _) is not null ? "latest" : "newest");
-        var from = Selectors.Build(game, history, fromKey, Array.Empty<string>(), out var fromError);
+        // A patch in another language starts from a build of the game as Steam has it, in the language it is installed in.
+        var steamHas = game.InLanguageOf ?? game;
+        var history = library.History(steamHas);
+        var fromKey = run.Settings.From ?? (Selectors.Build(steamHas, history, "latest", Array.Empty<string>(), out _) is not null ? "latest" : "newest");
+        var from = Selectors.Build(steamHas, history, fromKey, Array.Empty<string>(), out var fromError);
         if (from is null) return run.Fail(ExitCode.Usage, "no-from", fromError!);
         if (from.Manifests.Count == 0) return run.Fail(ExitCode.Usage, "no-from", $"The build {fromKey} has no manifests here.");
 
-        var destination = Destination(run, library, game, $"{game.Name} (patch {from.Key} to {target.Key})", out var error);
+        var destination = Destination(run, library, game,
+            $"{game.Name} (patch {from.Key} to {target.Key}{(game.Language is { } folderLanguage ? $", {SteamLanguages.Name(folderLanguage)}" : "")})", out var error);
         if (destination is null) return run.Fail(ExitCode.Usage, "no-folder", error!);
         if (!run.Yes && Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any()
             && PatchStore.LoadPatch(destination) is null)
@@ -194,12 +202,11 @@ public static partial class Actions
         var login = new LoginState { Probe = new LoginProbe(game.OwnerOf(first.Key), first.Key, first.Value) };
         var log = Runner.LogPath(game.AppId);
 
-        var baseManifests = target.Manifests.Keys.Where(from.Manifests.ContainsKey).ToDictionary(d => d, d => from.Manifests[d]);
-        var kept = from.Manifests.Where(b => !target.Manifests.TryGetValue(b.Key, out var t) || t == b.Value).ToDictionary(b => b.Key, b => b.Value);
+        var (baseManifests, baseDepots, kept) = Bases(game, target.Manifests, from.Manifests);
 
         run.Line($"{game.Name}: a patch from {from.Label} to {target.Label}");
         run.Line($"  into {destination}");
-        if (await PlanAsync(run, library, game, exe, baseManifests, target.Manifests, kept, destination, log, login) is not { } plan) return (int)ExitCode.Failed;
+        if (await PlanAsync(run, library, game, exe, baseManifests, baseDepots, target.Manifests, kept, destination, log, login) is not { } plan) return (int)ExitCode.Failed;
 
         var full = plan;
         plan = plan.Only(part.Includes);
@@ -221,12 +228,14 @@ public static partial class Actions
             Part = part.Label,
             From = from.Label,
             Created = DateTimeOffset.Now,
-            BaseManifests = IdMap.Write(baseManifests),
+            BaseManifests = IdMap.Write(baseDepots.ToDictionary(b => b.Value, b => baseManifests[b.Key])),
             TargetManifests = IdMap.Write(target.Manifests),
             Owners = IdMap.Write(game.Owners),
             Files = plan.Writes.ToList(),
             Remove = plan.Removes.ToList(),
             RemovesKnown = plan.RemovesKnown,
+            Language = game.Language,
+            LanguageSwaps = IdMap.Write(game.LanguageSwaps),
         };
         PatchStore.SavePatch(destination, record);
 
@@ -276,6 +285,8 @@ public static partial class Actions
         string build;
         string? builtPart;
         string? recordFiles = null;
+        string? language = null;
+        Dictionary<string, string> swaps = new();
 
         if (PatchStore.LoadPatch(folder) is { } patch)
         {
@@ -292,14 +303,16 @@ public static partial class Actions
             owners = IdMap.Owners(patch.Owners);
             build = patch.Build;
             builtPart = patch.Part;
+            language = patch.Language;
+            swaps = patch.LanguageSwaps;
             if (patch.Part == "chosen files") recordFiles = string.Join(",", patch.Files.Select(f => f.Name));
         }
         else if (AppState.LoadRecord(folder, out _)?.For(game.AppId) is { Complete: true } downloaded)
         {
             // A download in a language the game is not installed in holds depots Steam does not know this install by.
-            if (downloaded.Language is { } language && !string.Equals(language, library.LanguageOf(game), StringComparison.OrdinalIgnoreCase))
+            if (downloaded.Language is { } other && !string.Equals(other, library.LanguageOf(game), StringComparison.OrdinalIgnoreCase))
                 return run.Fail(ExitCode.Usage, "other-language",
-                    $"That folder holds {game.Name} in {SteamLanguages.Name(language)}, and the installed game is in {SteamLanguages.Name(library.LanguageOf(game) ?? SteamLanguages.English)}. Change the game's language in Steam first, or play it from the folder.");
+                    $"That folder holds the whole of {game.Name} in {SteamLanguages.Name(other)}, and the installed game is in {SteamLanguages.Name(library.LanguageOf(game) ?? SteamLanguages.English)}. Put the build into the game in {SteamLanguages.Name(other)} instead, which downloads only the files that differ, or play it from the folder.");
             target = downloaded.ManifestMap();
             owners = game.Owners;
             build = downloaded.Build;
@@ -382,6 +395,8 @@ public static partial class Actions
             TargetManifests = IdMap.Write(target),
             Owners = IdMap.Write(owners),
             Backup = backup,
+            Language = language,
+            LanguageSwaps = swaps,
         };
 
         try
@@ -407,7 +422,7 @@ public static partial class Actions
         run.Set("removed", record.Removed.Count);
         run.Set("backup", backup);
         var sharedFiles = part.Label == "chosen files" ? run.Settings.Files : part.Label is null ? recordFiles : null;
-        run.Set("shared", SharedBuild.Of(game, target, build, SharedBuild.OnlyOf(builtPart), sharedFiles, siblings: false).Text());
+        run.Set("shared", (SharedBuild.Of(game, target, build, SharedBuild.OnlyOf(builtPart), sharedFiles, siblings: false) with { Language = language }).Text());
         return run.Ok();
     }
 
@@ -461,8 +476,10 @@ public static partial class Actions
         var unchanged = 0;
         foreach (var (depot, manifest) in after.OrderBy(a => a.Key))
         {
-            ulong? had = now.TryGetValue(depot, out var n) ? n : null;
-            if (had == manifest)
+            // A language depot stands in for the game's own language's depot, and shows what that one holds now.
+            var standsFor = game.LanguageSwaps.TryGetValue(depot, out var own) && now.ContainsKey(own) ? own : depot;
+            ulong? had = now.TryGetValue(standsFor, out var n) ? n : null;
+            if (had == manifest && standsFor == depot)
             {
                 unchanged++;
                 continue;
@@ -470,7 +487,7 @@ public static partial class Actions
             depots.Add(new JsonObject
             {
                 ["depot"] = depot,
-                ["name"] = library.DepotName(game, depot),
+                ["name"] = standsFor == depot ? library.DepotName(game, depot) : $"{library.DepotName(game, depot)}, in place of depot {standsFor}",
                 ["now"] = had?.ToString(CultureInfo.InvariantCulture),
                 ["after"] = manifest.ToString(CultureInfo.InvariantCulture),
             });
@@ -480,23 +497,40 @@ public static partial class Actions
 
     /// <summary>The files that turn one build into another, fetching any file list this PC does not have. Null once the failure has been reported.</summary>
     static async Task<PatchPlan?> PlanAsync(Job run, GameLibrary library, GameEntry game, string exe,
-        IReadOnlyDictionary<uint, ulong> baseManifests, IReadOnlyDictionary<uint, ulong> target, IReadOnlyDictionary<uint, ulong> kept,
-        string folder, string log, LoginState login)
+        IReadOnlyDictionary<uint, ulong> baseManifests, IReadOnlyDictionary<uint, uint> baseDepots, IReadOnlyDictionary<uint, ulong> target,
+        IReadOnlyDictionary<uint, ulong> kept, string folder, string log, LoginState login)
     {
-        var changed = target.Where(t => !baseManifests.TryGetValue(t.Key, out var b) || b != t.Value).Select(t => t.Key).OrderBy(d => d).ToList();
+        // A language depot's files start from those of the depot it stands in for.
+        uint BaseDepot(uint depot) => baseDepots.GetValueOrDefault(depot, depot);
+        var changed = target.Where(t => !baseManifests.TryGetValue(t.Key, out var b) || b != t.Value || BaseDepot(t.Key) != t.Key)
+            .Select(t => t.Key).OrderBy(d => d).ToList();
         if (changed.Count == 0) return new PatchPlan(Array.Empty<PatchWrite>(), Array.Empty<PatchRemove>(), true);
 
         var wanted = changed.Select(d => (Depot: d, Manifest: target[d]))
-            .Concat(changed.Where(baseManifests.ContainsKey).Select(d => (Depot: d, Manifest: baseManifests[d])))
+            .Concat(changed.Where(baseManifests.ContainsKey).Select(d => (Depot: BaseDepot(d), Manifest: baseManifests[d])))
+            .Distinct()
             .ToList();
         if (await Runner.ListsAsync(run, exe, library, game, wanted, folder, log, login) is not { } lists) return null;
 
         var targetLists = changed.ToDictionary(d => d, d => lists[(d, target[d])]);
-        var baseLists = changed.Where(baseManifests.ContainsKey).ToDictionary(d => d, d => lists[(d, baseManifests[d])]);
+        var baseLists = changed.Where(baseManifests.ContainsKey).ToDictionary(d => d, d => lists[(BaseDepot(d), baseManifests[d])]);
         var keptLists = kept.Where(k => !targetLists.ContainsKey(k.Key))
             .Select(k => library.Files(k.Key, k.Value) ?? ManifestLists.Find(k.Key, k.Value, folder))
             .ToList();
         return PatchPlan.Compute(baseLists, targetLists, keptLists);
+    }
+
+    /// <summary>
+    /// False once the failure has been reported: a build going into the game or a patch has depots whose manifest is not known
+    /// here and was not named, as a language's depots in an older build are.
+    /// </summary>
+    static bool AllKnown(Job run, GameLibrary library, GameEntry game, BuildTarget target)
+    {
+        if (target.Build is not { } build || build.Unknown.Where(d => !target.Manifests.ContainsKey(d)).ToList() is not { Count: > 0 } unknown) return true;
+        var before = Selectors.NeededBefore(build);
+        NeedsManifests(run, library, game, Selectors.Needs(game, unknown), before,
+            Selectors.UnknownText(unknown, before) + " Add each one with --manifest depot=manifest.");
+        return false;
     }
 
     /// <summary>Downloads only the files of the plan into the folder, and checks every one against the build.</summary>

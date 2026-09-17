@@ -35,7 +35,7 @@
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Text="The game's text and speech in the build are in this language." Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding LanguageNote}" Classes="muted" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 

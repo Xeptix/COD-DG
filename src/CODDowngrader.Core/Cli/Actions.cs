@@ -27,9 +27,9 @@ public static partial class Actions
         if (run.Settings.Language is { Length: > 0 } language)
         {
             if (InLanguage(run, library, game, language) is not { } inLanguage) return run.Reported ?? (int)ExitCode.Usage;
-            if (inLanguage != game && command != "download")
-                return run.Fail(ExitCode.Usage, "language-download-only",
-                    $"{game.Name} in {SteamLanguages.Name(inLanguage.Language!)} can only be downloaded into a folder of its own: the installed game is in {SteamLanguages.Name(library.LanguageOf(game) ?? SteamLanguages.English)}.");
+            if (inLanguage != game && command is not ("download" or "ingame" or "patch"))
+                return run.Fail(ExitCode.Usage, "language-not-here",
+                    $"--language is for download, ingame and patch. {(command == "apply" ? "A folder goes in with the language it was made in." : "")}".TrimEnd());
             game = inLanguage;
         }
 
@@ -67,7 +67,7 @@ public static partial class Actions
         }
         if (game.Language is { } language) run.Set("language", language);
 
-        if (game.Language is { } inLanguage) target = target with { Label = $"{target.Label}, in {SteamLanguages.Name(inLanguage)}" };
+        target = InLanguageLabel(game, target);
         var destination = Destination(run, library, game, $"{game.Name} ({target.Key}{(game.Language is { } folderLanguage ? $", {SteamLanguages.Name(folderLanguage)}" : "")})", out var error);
         if (destination is null) return run.Fail(ExitCode.Usage, "no-folder", error!);
 
@@ -230,6 +230,31 @@ public static partial class Actions
         return run.Ok();
     }
 
+    /// <summary>A build in another language is called so: ", in German" after its name.</summary>
+    internal static BuildTarget InLanguageLabel(GameEntry game, BuildTarget target) =>
+        game.Language is { } language ? target with { Label = $"{target.Label}, in {SteamLanguages.Name(language)}" } : target;
+
+    /// <summary>
+    /// What a build's depots start from in the game or build <paramref name="source"/> holds: the same depot, or for a language
+    /// depot, the one it stands in for. Keyed by the build's depots; the kept depots are the source's depots the build does not
+    /// change, the ones a language replaces included, so their files stay.
+    /// </summary>
+    internal static (Dictionary<uint, ulong> Base, Dictionary<uint, uint> BaseDepots, Dictionary<uint, ulong> Kept) Bases(
+        GameEntry game, IReadOnlyDictionary<uint, ulong> target, IReadOnlyDictionary<uint, ulong> source)
+    {
+        var bases = new Dictionary<uint, ulong>();
+        var baseDepots = new Dictionary<uint, uint>();
+        foreach (var depot in target.Keys)
+        {
+            var from = game.LanguageSwaps.GetValueOrDefault(depot, depot);
+            if (!source.TryGetValue(from, out var manifest)) continue;
+            bases[depot] = manifest;
+            baseDepots[depot] = from;
+        }
+        var kept = source.Where(s => !target.TryGetValue(s.Key, out var t) || t == s.Value).ToDictionary(s => s.Key, s => s.Value);
+        return (bases, baseDepots, kept);
+    }
+
     /// <summary>
     /// The game in a language --language names: itself when that changes none of its depots. Null once the failure has been
     /// reported: the game has no such language on Steam.
@@ -300,7 +325,7 @@ public static partial class Actions
             return run.Fail(ExitCode.Usage, "nothing-applied", $"No build from COD Downgrader is written into {app.InstallDir}.");
 
         var steam = library.FolderManifests(record.InstallDir);
-        var depots = UndoPlan.Depots(record).Where(steam.ContainsKey).OrderBy(d => d).ToList();
+        var depots = UndoPlan.Depots(record).Where(steam.ContainsKey).Distinct().OrderBy(d => d).ToList();
         var lists = new Dictionary<uint, IReadOnlyList<ManifestFile>>();
         foreach (var depot in depots)
             if (library.Files(depot, steam[depot]) is { } files) lists[depot] = files;

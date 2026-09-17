@@ -181,7 +181,7 @@ public static class CommandLine
         Options:
           --to <folder>             Where a download, a patch, an export or a shared build goes
           --from <build|folder>     patch: the build it starts from. apply: the folder to take
-          --language <language>     download, builds: the build in another language Steam has for
+          --language <language>     download, ingame, patch, builds: the build in another language Steam has for
                                     the game, by Steam's name for it: english, french, german,
                                     spanish, italian, russian, polish, japanese, brazilian, schinese...
                                     builds --json lists each game's

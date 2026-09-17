@@ -66,6 +66,29 @@ var action = new ActionPageViewModel(model, game, "ingame", older);
 model.Show(action);
 Pump(() => !action.IsPlanning, 120_000);
 Shot("2-ingame-plan");
+model.Back();
+
+// The installed build in French: chosen on the game page, it can go into the game, and its page plans the language files alone.
+if (game.HasLanguages && game.Builds.FirstOrDefault(b => b.IsInstalled) is { } installedBuild
+    && game.Languages.FirstOrDefault(l => l.Code == "french") is { } french)
+{
+    game.SelectedBuild = installedBuild;
+    game.Language = french;
+    Shot("2b-game-french");
+    var inFrench = new ActionPageViewModel(model, game, "ingame", installedBuild, language: "french");
+    model.Show(inFrench);
+    Pump(() => !inFrench.IsPlanning, 300_000);
+    Shot("2c-ingame-french");
+    model.Back();
+    var patchFrench = new ActionPageViewModel(model, game, "patch", installedBuild, language: "french");
+    model.Show(patchFrench);
+    Pump(() => !patchFrench.IsPlanning, 300_000);
+    Shot("2d-patch-french");
+    model.Back();
+    game.Language = game.Languages.First(l => l.IsInstalled);
+    game.SelectedBuild = older;
+}
+model.Show(action);
 action.Part = 3;
 foreach (var folderChoice in action.Folders) folderChoice.IsChecked = true;
 Shot("3-ingame-choose-files");

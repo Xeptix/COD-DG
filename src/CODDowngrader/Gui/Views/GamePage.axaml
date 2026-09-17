@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CODDowngrader.Gui.ViewModels"
+             xmlns:gui="using:CODDowngrader.Gui"
              x:Class="CODDowngrader.Gui.Views.GamePage"
              x:DataType="vm:GamePageViewModel">
   <DockPanel>
@@ -63,7 +64,26 @@
         </Border>
 
         <StackPanel Spacing="8" IsVisible="{Binding Downgradable}">
-          <TextBlock Text="Choose a version" Classes="h2" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Choose a version" Classes="h2" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasLanguages}" VerticalAlignment="Center"
+                        ToolTip.Tip="The language of the game's text and speech in the version you download, put into the game, patch or share.">
+              <TextBlock Text="Language" VerticalAlignment="Center" Classes="muted" />
+              <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding Language}" MinWidth="230">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="gui:LanguageChoice">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <Border Width="24" Height="16" CornerRadius="2" ClipToBounds="True" VerticalAlignment="Center" IsVisible="{Binding HasFlag}">
+                        <Image Source="{Binding Flag}" Stretch="UniformToFill" />
+                      </Border>
+                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Note}" Classes="muted small" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+          </Grid>
           <TextBlock Text="{Binding Notice}" IsVisible="{Binding HasNotice}" TextWrapping="Wrap" />
           <ProgressBar IsIndeterminate="True" IsVisible="{Binding Loading}" Width="220" HorizontalAlignment="Left" />
           <Border Classes="card" Padding="6">

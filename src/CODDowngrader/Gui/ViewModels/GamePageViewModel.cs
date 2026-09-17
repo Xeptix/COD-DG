@@ -49,6 +49,7 @@ public sealed class GamePageViewModel : Observable
     string? _atMessage;
     string? _notice;
     string? _shareMessage;
+    LanguageChoice? _language;
 
     public GamePageViewModel(MainViewModel main, GameLibrary library, GameEntry game)
     {
@@ -56,6 +57,11 @@ public sealed class GamePageViewModel : Observable
         _library = library;
         Game = game;
         Applied = game.Installed is { } app ? PatchStore.AppliedTo(app.InstallDir) : null;
+
+        // Every action on the chosen version takes the language chosen here, starting on the one the game is installed in, or
+        // the one Steam would download.
+        foreach (var choice in Flags.For(library, game)) Languages.Add(choice);
+        _language = Languages.FirstOrDefault(l => l.IsInstalled) ?? Languages.FirstOrDefault(l => l.IsDefault) ?? Languages.FirstOrDefault();
 
         InGameCommand = new Command(() => Act("ingame"), () => CanInGame);
         DownloadCommand = new Command(() => Act("download"), () => _selected is not null);
@@ -121,6 +127,25 @@ public sealed class GamePageViewModel : Observable
                             && PatchApplier.StateOf(Applied, _library.FolderManifests(Applied.InstallDir)) is DowngradeState.FilesChanged or DowngradeState.SteamUpdated;
 
     public ObservableCollection<BuildItem> Builds { get; } = new();
+
+    public ObservableCollection<LanguageChoice> Languages { get; } = new();
+    public bool HasLanguages => Languages.Count > 1;
+
+    /// <summary>The language the chosen version is downloaded, put into the game, patched or shared in.</summary>
+    public LanguageChoice? Language
+    {
+        get => _language;
+        set
+        {
+            if (value is null || !Set(ref _language, value)) return;
+            ShareMessage = null;
+            Raise(nameof(InGameHint));
+            Refresh();
+        }
+    }
+
+    /// <summary>A language other than the one the game is installed in is chosen.</summary>
+    bool OtherLanguage => IsInstalled && _language is { IsInstalled: false };
 
     public BuildItem? SelectedBuild
     {
@@ -189,9 +214,11 @@ public sealed class GamePageViewModel : Observable
 
     public bool HasShareMessage => _shareMessage is not null;
 
-    bool CanInGame => IsInstalled && _selected is { IsInstalled: false };
+    bool CanInGame => IsInstalled && _selected is not null && (!_selected.IsInstalled || OtherLanguage);
 
-    public string? InGameHint => _selected is { IsInstalled: true } ? "That build is the one installed." : null;
+    public string? InGameHint => _selected is { IsInstalled: true } && !OtherLanguage
+        ? HasLanguages ? "That build is the one installed. Choose another language to put it into the game in that language." : "That build is the one installed."
+        : null;
 
     public Command InGameCommand { get; }
     public Command DownloadCommand { get; }
@@ -235,6 +262,7 @@ public sealed class GamePageViewModel : Observable
         var existing = Builds.FirstOrDefault(b => b.Key == item.Key && b.Chosen);
         if (existing is not null) Builds.Remove(existing);
         item.Chosen = true;
+        if (item.Settings.Language is { } language && Languages.FirstOrDefault(l => l.Code == language) is { } choice) Language = choice;
         Builds.Insert(0, item);
         SelectedBuild = item;
         Notice = notice ?? $"{item.Title}: chosen. Pick what to do with it below.";
@@ -245,14 +273,22 @@ public sealed class GamePageViewModel : Observable
     {
         if (_selected is not { } item || _history is not { } history) return;
         var settings = item.Settings;
-        if (Selectors.Of(Game, history, settings, out var error) is not { } target)
+        var game = _language is { } language ? _library.ForLanguage(Game, language.Code) : Game;
+        if (game != Game) history = _library.History(game);
+        if (Selectors.Of(game, history, settings, out var error) is not { } target)
         {
             ShareMessage = error;
             return;
         }
+        if (target.Build is { } build && build.Unknown.Any(d => !target.Manifests.ContainsKey(d)))
+        {
+            ShareMessage = $"In {_language!.Name}, this build needs manifests from SteamDB first: download it or put it into the game, and the page asks for them.";
+            return;
+        }
         ShareMessage = null;
         var title = item.Chosen ? settings.Label ?? target.Label : item.Title;
-        _main.Show(new SharePageViewModel(_main, SharedBuild.Of(Game, target.Manifests, title, settings.Only, settings.Files, settings.Siblings)));
+        if (game.Language is { } other) title = $"{title}, in {Steam.SteamLanguages.Name(other)}";
+        _main.Show(new SharePageViewModel(_main, SharedBuild.Of(game, target.Manifests, title, settings.Only, settings.Files, settings.Siblings)));
     }
 
     async Task FindAtAsync()
@@ -283,7 +319,7 @@ public sealed class GamePageViewModel : Observable
     void Act(string kind)
     {
         if (_selected is null) return;
-        _main.Show(new ActionPageViewModel(_main, this, kind, _selected));
+        _main.Show(new ActionPageViewModel(_main, this, kind, _selected, language: _language?.Code));
     }
 
     void Again()
@@ -294,6 +330,7 @@ public sealed class GamePageViewModel : Observable
             Manifests = IdMap.Manifests(Applied.TargetManifests).Select(m => $"{m.Key}={m.Value}").ToList(),
             Label = Applied.Build,
             Again = true,
+            Language = Applied.Language,
         };
         var item = new BuildItem("again", Applied.Build, "the build written in before", null, BuildKind.Previous, settings);
         _main.Show(new ActionPageViewModel(_main, this, "ingame", item));

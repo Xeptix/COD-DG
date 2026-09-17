@@ -162,13 +162,13 @@ public sealed record SharedBuild(uint AppId, string Game, string Title, IReadOnl
     public static SharedBuild Of(AppliedRecord record, GameEntry game) =>
         Of(game, IdMap.Manifests(record.TargetManifests), record.Build, OnlyOf(record.Part),
             record.Part == "chosen files" ? string.Join(",", record.Written.Select(w => w.Name)) : null,
-            record.AppIds.Count > 1);
+            record.AppIds.Count > 1) with { Language = record.Language };
 
     /// <summary>A patch folder, as its record keeps it.</summary>
     public static SharedBuild Of(PatchRecord record, GameEntry game) =>
         Of(game, IdMap.Manifests(record.TargetManifests), record.Build, OnlyOf(record.Part),
             record.Part == "chosen files" ? string.Join(",", record.Files.Select(f => f.Name)) : null,
-            siblings: false);
+            siblings: false) with { Language = record.Language };
 
     /// <summary>A whole build downloaded into a folder of its own.</summary>
     public static SharedBuild Of(DownloadPart part, GameEntry game) =>

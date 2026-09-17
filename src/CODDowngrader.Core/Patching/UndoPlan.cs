@@ -20,8 +20,12 @@ public sealed record UndoPlan(
 {
     public ulong DownloadBytes => FromSteam.Aggregate(0UL, (sum, w) => sum + w.Size);
 
-    /// <summary>The depots whose file lists say where a file without a backup comes from: the ones the downgrade changed.</summary>
-    public static IEnumerable<uint> Depots(AppliedRecord record) => IdMap.Manifests(record.TargetManifests).Keys;
+    /// <summary>
+    /// The depots whose file lists say where a file without a backup comes from: the ones the downgrade changed, and those of
+    /// Steam's language that a language written in stood in for.
+    /// </summary>
+    public static IEnumerable<uint> Depots(AppliedRecord record) =>
+        IdMap.Manifests(record.TargetManifests).Keys.Concat(IdMap.Owners(record.LanguageSwaps).Values);
 
     /// <param name="installed">Steam's file list of each depot at the build it has installed. A depot without one is not searched.</param>
     public static UndoPlan Compute(AppliedRecord record, IReadOnlyDictionary<uint, IReadOnlyList<ManifestFile>> installed)

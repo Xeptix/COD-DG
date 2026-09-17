@@ -41,6 +41,12 @@ public sealed class PatchRecord
     public List<PatchRemove> Remove { get; set; } = new();
     public bool RemovesKnown { get; set; }
 
+    /// <summary>The language the patch's language depots are in, as Steam's code names it; null for the game's own.</summary>
+    public string? Language { get; set; }
+
+    /// <summary>Each language depot of the patch, to the depot of the game's own language it stands in for.</summary>
+    public Dictionary<string, string> LanguageSwaps { get; set; } = new();
+
     public PatchPlan Plan() => new(Files, Remove, RemovesKnown);
 }
 
@@ -76,6 +82,13 @@ public sealed class AppliedRecord
 
     public Dictionary<string, string> TargetManifests { get; set; } = new();
     public Dictionary<string, string> Owners { get; set; } = new();
+
+    /// <summary>The language written in, as Steam's code names it; null for the game's own.</summary>
+    public string? Language { get; set; }
+
+    /// <summary>Each language depot written in, to the depot of Steam's language it stands in for, whose files Undo takes back.</summary>
+    public Dictionary<string, string> LanguageSwaps { get; set; } = new();
+
     public List<AppliedFile> Written { get; set; } = new();
     public List<string> Removed { get; set; } = new();
 

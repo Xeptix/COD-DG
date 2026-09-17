@@ -149,7 +149,7 @@ public sealed class BuildsPageViewModel : Observable, IHasBack
             var game = library?.Entries.FirstOrDefault(e => e.AppId == build.AppId);
             var canWrite = library is not null && game is { Installed: not null, Downgradable: true };
             // A download in a language the game is not installed in stays in its folder.
-            var otherLanguage = shared?.Language is { } language && game is not null && library?.LanguageOf(game) != language;
+            var otherLanguage = build.Kind == "download" && shared?.Language is { } language && game is not null && library?.LanguageOf(game) != language;
             Builds.Add(new MadeBuildItem(build, state, _main.IconOf(build.AppId),
                 shared is null ? null : new Command(() => _main.Show(new SharePageViewModel(_main, shared))),
                 exists ? new Command(() => _main.Platform.Open(folder)) : null,

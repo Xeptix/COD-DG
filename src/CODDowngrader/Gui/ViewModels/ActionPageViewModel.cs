@@ -115,7 +115,8 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
     readonly HashSet<string>? _chosenFiles;
 
     /// <param name="folder">apply: the folder to take, when it was chosen before this page opened.</param>
-    public ActionPageViewModel(MainViewModel main, GamePageViewModel game, string kind, BuildItem? build, string? folder = null)
+    /// <param name="language">download, ingame, patch: the language chosen on the game page.</param>
+    public ActionPageViewModel(MainViewModel main, GamePageViewModel game, string kind, BuildItem? build, string? folder = null, string? language = null)
     {
         _main = main;
         _game = game;
@@ -152,13 +153,14 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
             }
         }
 
-        // A download can be in any language Steam has for the game, and starts in the one Steam would download.
-        if (kind == "download" && main.Library is { } library && library.Languages(game.Game) is { Count: > 1 } languages)
+        // A download, a build put into the game and a patch can be in any language Steam has for the game.
+        if (kind is "download" or "ingame" or "patch" && main.Library is { } library)
         {
-            var steamDefault = library.DefaultLanguage(game.Game);
-            foreach (var code in languages) Languages.Add(Flags.Choice(code, steamDefault));
-            var wanted = build?.Settings.Language ?? steamDefault;
-            _language = Languages.FirstOrDefault(l => l.Code == wanted) ?? Languages.FirstOrDefault(l => l.IsDefault) ?? Languages[0];
+            foreach (var choice in Flags.For(library, game.Game)) Languages.Add(choice);
+            var wanted = language ?? build?.Settings.Language;
+            _language = Languages.FirstOrDefault(l => l.Code == wanted)
+                        ?? (kind == "download" ? null : Languages.FirstOrDefault(l => l.IsInstalled))
+                        ?? Languages.FirstOrDefault(l => l.IsDefault) ?? Languages.FirstOrDefault();
         }
 
         if (kind == "patch")
@@ -228,6 +230,13 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
 
     public ObservableCollection<LanguageChoice> Languages { get; } = new();
     public bool HasLanguages => Languages.Count > 1;
+
+    public string LanguageNote => Kind switch
+    {
+        "ingame" => "Only the build's language files change: the ones that differ are downloaded and swapped in, and Undo puts your language back. Steam puts its own language back when it verifies or updates the game.",
+        "patch" => "A patch in another language holds that language's files that differ from the build it starts from, in the game's own language.",
+        _ => "The game's text and speech in the build are in this language.",
+    };
 
     /// <summary>The language the download is in. Choosing another works out the download again, and forgets manifests found for the last one.</summary>
     public LanguageChoice? Language
@@ -401,7 +410,7 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
             Delete = DeleteAfter,
             Again = Again,
             To = IsDownload || IsPatch ? (plan && Folder == _suggestedFolder ? null : NullIfEmpty(Folder)) : null,
-            Language = IsDownload ? _language?.Code ?? baseline.Language : baseline.Language,
+            Language = IsDownload || IsInGame || IsPatch ? _language?.Code ?? baseline.Language : baseline.Language,
             Manifests = manifests,
             Label = _foundManifests.Count > 0 ? baseline.Label ?? _build?.Title : baseline.Label,
             From = IsPatch ? _patchFrom?.Key : IsApply ? NullIfEmpty(Folder) : null,
@@ -650,7 +659,7 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
             _main.Back();
             return;
         }
-        var language = IsDownload && _language is { } chosen ? $" in {chosen.Name}" : "";
+        var language = HasLanguages && _language is { IsInstalled: false } chosen ? $" in {chosen.Name}" : "";
         var explanation = $"For “{_build?.Title ?? "this build"}”{language}, Steam's product info on this PC does not name these depots' manifests."
                           + (_neededBefore is { } before
                               ? $" On each depot's SteamDB page, the one to take is the newest first seen before {before.ToLocalTime():d MMM yyyy HH:mm}: paste the rows and it is picked for you."
@@ -688,9 +697,9 @@ public sealed class ActionPageViewModel : Observable, IHasBack, IJobView
         var settings = Settings(plan: false);
         var title = Kind switch
         {
-            "ingame" => $"Putting {_build?.Title} into {_game.Name}",
+            "ingame" => $"Putting {_build?.Title}{(HasLanguages && _language is { IsInstalled: false } inGame ? $" in {inGame.Name}" : "")} into {_game.Name}",
             "download" => $"Downloading {_build?.Title}{(HasLanguages && _language is { } language ? $" in {language.Name}" : "")}",
-            "patch" => $"Saving a patch folder for {_build?.Title}",
+            "patch" => $"Saving a patch folder for {_build?.Title}{(HasLanguages && _language is { IsInstalled: false } patched ? $" in {patched.Name}" : "")}",
             "undo" => $"Undoing {_game.Applied?.Title}",
             _ => $"Applying {Folder}",
         };

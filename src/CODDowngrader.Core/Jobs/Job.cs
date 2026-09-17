@@ -31,7 +31,7 @@ public sealed record JobSettings
 
     /// <summary>
     /// The language a download is in, as Steam's code names it (english, french...): each language depot of the build is that
-    /// language's instead. Null for the languages the game has here. Only a download into a folder of its own takes another.
+    /// language's instead. Null for the languages the game has here. download, ingame and patch take it.
     /// </summary>
     public string? Language { get; init; }
 
